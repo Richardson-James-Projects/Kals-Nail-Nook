@@ -70,13 +70,36 @@ export const AuthProvider = ({ children }) => {
         return sessionUser;
     };
 
+    const updatePassword = async (userId, newPassword) => {
+        const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+        const userIdx = users.findIndex(u => u.id === userId);
+        if (userIdx === -1) throw new Error('User not found.');
+
+        const passwordHash = await hashPassword(newPassword);
+        users[userIdx].passwordHash = passwordHash;
+        delete users[userIdx].requiresPasswordReset;
+
+        localStorage.setItem('nail_nook_users', JSON.stringify(users));
+
+        // If this is the currently logged-in user, update session
+        const storedUser = localStorage.getItem('nail_nook_user');
+        if (storedUser) {
+            const sessionUser = JSON.parse(storedUser);
+            if (sessionUser.id === userId) {
+                delete sessionUser.requiresPasswordReset;
+                setUser(sessionUser);
+                localStorage.setItem('nail_nook_user', JSON.stringify(sessionUser));
+            }
+        }
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('nail_nook_user');
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, updatePassword, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

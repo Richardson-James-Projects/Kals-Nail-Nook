@@ -36,6 +36,27 @@ const TechDashboard = () => {
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [addUserError, setAddUserError] = useState('');
 
+    // Booking appointment state
+    const [technicians, setTechnicians] = useState([]);
+    const [isBookingAppt, setIsBookingAppt] = useState(false);
+    const [bookingError, setBookingError] = useState('');
+    const [bookingClientType, setBookingClientType] = useState('guest');
+    const [selectedClientUser, setSelectedClientUser] = useState('');
+    const [bookingFormData, setBookingFormData] = useState({
+        service: '',
+        techId: '',
+        date: '',
+        time: '09:00 AM',
+        guestName: '',
+        guestPhone: '',
+        guestEmail: ''
+    });
+
+    const TIME_SLOTS = [
+        '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+        '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
+    ];
+
     useEffect(() => {
         const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
         // We find the matching tech by email, or fallback if testing locally
@@ -58,6 +79,8 @@ const TechDashboard = () => {
 
         const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
         setUsersList(allUsers);
+
+        setTechnicians(techs);
     }, [user]);
 
     // --- APPOINTMENT ACTIONS ---
@@ -202,7 +225,8 @@ const TechDashboard = () => {
                 email,
                 phone,
                 passwordHash,
-                role
+                role,
+                requiresPasswordReset: true
             };
 
             const updatedUsers = [...usersList, newUser];
@@ -226,6 +250,87 @@ const TechDashboard = () => {
         }
     };
 
+    const openBookingModal = () => {
+        setBookingError('');
+        setBookingFormData({
+            service: services[0]?.id || '',
+            techId: techId || technicians[0]?.id || '',
+            date: new Date().toISOString().split('T')[0],
+            time: '09:00 AM',
+            guestName: '',
+            guestPhone: '',
+            guestEmail: ''
+        });
+        setBookingClientType('guest');
+        setSelectedClientUser('');
+        setIsBookingAppt(true);
+    };
+
+    const handleCreateBookingSubmit = (e) => {
+        e.preventDefault();
+        setBookingError('');
+
+        const { service, techId: bookingTechId, date, time, guestName, guestPhone, guestEmail } = bookingFormData;
+
+        if (!service || !bookingTechId || !date || !time) {
+            setBookingError('Please fill in all required fields.');
+            return;
+        }
+
+        let clientName = '';
+        let clientPhone = '';
+        let clientEmail = '';
+
+        if (bookingClientType === 'customer') {
+            const customerObj = usersList.find(u => u.id === selectedClientUser);
+            if (!customerObj) {
+                setBookingError('Please select a registered client.');
+                return;
+            }
+            clientName = customerObj.name;
+            clientPhone = customerObj.phone || 'N/A';
+            clientEmail = customerObj.email;
+        } else {
+            if (!guestName) {
+                setBookingError('Please enter the client name.');
+                return;
+            }
+            clientName = guestName;
+            clientPhone = guestPhone || 'N/A';
+            clientEmail = guestEmail || 'guest@example.com';
+        }
+
+        const techObj = technicians.find(t => t.id === bookingTechId);
+        const serviceObj = services.find(s => s.id === service);
+
+        const newBooking = {
+            id: Date.now().toString(),
+            service,
+            techId: bookingTechId,
+            date,
+            time,
+            name: clientName,
+            phone: clientPhone,
+            email: clientEmail,
+            techName: techObj ? techObj.name : 'Booking',
+            serviceName: serviceObj ? serviceObj.name : 'Service',
+            createdAt: new Date().toISOString(),
+            bookedBy: user?.email,
+            status: 'Confirmed'
+        };
+
+        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+        const updatedBookings = [...allBookings, newBooking];
+        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+
+        // Refresh lists
+        const myBookings = updatedBookings.filter(b => b.techId === techId || b.techId === 'any');
+        myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+        setAppointments(myBookings);
+
+        setIsBookingAppt(false);
+    };
+
     return (
         <div className="container" style={{ padding: '4rem 1rem' }}>
             <div style={{ marginBottom: '3rem' }}>
@@ -238,9 +343,28 @@ const TechDashboard = () => {
                 {/* 1. Appointment List */}
                 <div style={{ gridColumn: '1 / -1' }}>
                     <section>
-                        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
-                            Appointment Schedule
-                        </h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
+                            <h2 style={{ fontSize: '1.25rem', margin: 0 }}>
+                                Appointment Schedule
+                            </h2>
+                            <button 
+                                onClick={openBookingModal}
+                                style={{
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '0.5rem', 
+                                    backgroundColor: 'var(--color-primary)', 
+                                    color: 'var(--color-secondary)', 
+                                    padding: '0.5rem 1rem', 
+                                    borderRadius: '6px', 
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <Plus size={16} /> New Appointment
+                            </button>
+                        </div>
 
                         {appointments.length === 0 ? (
                             <p style={{ opacity: 0.6 }}>No appointments scheduled yet.</p>
@@ -795,6 +919,185 @@ const TechDashboard = () => {
                         
                         <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
                             Create Account
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* New Appointment Modal */}
+            {isBookingAppt && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+                }}>
+                    <form onSubmit={handleCreateBookingSubmit} style={{
+                        backgroundColor: 'var(--color-white)', padding: '2rem', borderRadius: '12px', maxWidth: '500px', width: '90%', position: 'relative'
+                    }}>
+                        <button type="button" onClick={() => setIsBookingAppt(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <X size={20} />
+                        </button>
+
+                        <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}>Book Appointment (Staff Form)</h3>
+                        
+                        {bookingError && (
+                            <div style={{
+                                backgroundColor: '#fee2e2',
+                                color: '#dc2626',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                fontSize: '0.875rem'
+                            }}>
+                                {bookingError}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '4px' }}>
+                            {/* Client Type Toggle */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Client Type</label>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <input 
+                                            type="radio" 
+                                            name="clientType" 
+                                            checked={bookingClientType === 'guest'} 
+                                            onChange={() => setBookingClientType('guest')} 
+                                        />
+                                        <span style={{ fontSize: '0.9rem' }}>Walk-in / Guest</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <input 
+                                            type="radio" 
+                                            name="clientType" 
+                                            checked={bookingClientType === 'customer'} 
+                                            onChange={() => setBookingClientType('customer')} 
+                                        />
+                                        <span style={{ fontSize: '0.9rem' }}>Registered Account</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Registered Client Selection */}
+                            {bookingClientType === 'customer' && (
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Registered Account</label>
+                                    <select 
+                                        value={selectedClientUser} 
+                                        onChange={(e) => setSelectedClientUser(e.target.value)} 
+                                        required 
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                    >
+                                        <option value="" disabled>Choose a customer...</option>
+                                        {usersList
+                                            .filter(u => u.role === 'customer')
+                                            .map(u => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Guest Details */}
+                            {bookingClientType === 'guest' && (
+                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Client Name</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            value={bookingFormData.guestName}
+                                            onChange={(e) => setBookingFormData({...bookingFormData, guestName: e.target.value})}
+                                            style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone</label>
+                                            <input 
+                                                type="tel" 
+                                                value={bookingFormData.guestPhone}
+                                                onChange={(e) => setBookingFormData({...bookingFormData, guestPhone: e.target.value})}
+                                                placeholder="555-0100" 
+                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Email</label>
+                                            <input 
+                                                type="email" 
+                                                value={bookingFormData.guestEmail}
+                                                onChange={(e) => setBookingFormData({...bookingFormData, guestEmail: e.target.value})}
+                                                placeholder="guest@example.com" 
+                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <hr style={{ border: '0', borderTop: '1px solid #eee', margin: '0.5rem 0' }} />
+
+                            {/* Service and Tech */}
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service</label>
+                                    <select 
+                                        value={bookingFormData.service} 
+                                        onChange={(e) => setBookingFormData({...bookingFormData, service: e.target.value})} 
+                                        required 
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                    >
+                                        {services.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Technician</label>
+                                    <select 
+                                        value={bookingFormData.techId} 
+                                        onChange={(e) => setBookingFormData({...bookingFormData, techId: e.target.value})} 
+                                        required 
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                    >
+                                        {technicians.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Date and Time */}
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Date</label>
+                                    <input 
+                                        type="date" 
+                                        required 
+                                        value={bookingFormData.date}
+                                        onChange={(e) => setBookingFormData({...bookingFormData, date: e.target.value})}
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
+                                    <select 
+                                        value={bookingFormData.time} 
+                                        onChange={(e) => setBookingFormData({...bookingFormData, time: e.target.value})} 
+                                        required 
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                    >
+                                        {TIME_SLOTS.map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                            Book Appointment
                         </button>
                     </form>
                 </div>
