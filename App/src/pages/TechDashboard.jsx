@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban } from 'lucide-react';
+import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert } from 'lucide-react';
+import { hashPassword } from '../utils/crypto';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -32,6 +33,8 @@ const TechDashboard = () => {
 
     const [usersList, setUsersList] = useState([]);
     const [searchUserQuery, setSearchUserQuery] = useState('');
+    const [isAddingUser, setIsAddingUser] = useState(false);
+    const [addUserError, setAddUserError] = useState('');
 
     useEffect(() => {
         const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
@@ -162,9 +165,64 @@ const TechDashboard = () => {
         }
 
         if (window.confirm(`Are you sure you want to delete the account for ${targetUser.name} (${targetUser.email})? This action cannot be undone.`)) {
-            const updated = usersList.filter(u => u.id !== userId);
-            setUsersList(updated);
-            localStorage.setItem('nail_nook_users', JSON.stringify(updated));
+            const updatedUsers = usersList.filter(u => u.id !== userId);
+            setUsersList(updatedUsers);
+            localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
+
+            // Also keep technicians selection list in sync for booking
+            if (targetUser.role === 'tech') {
+                const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                const updatedTechs = currentTechs.filter(t => t.email.toLowerCase() !== targetUser.email.toLowerCase());
+                localStorage.setItem('technicians', JSON.stringify(updatedTechs));
+            }
+        }
+    };
+
+    const handleCreateUser = async (e) => {
+        e.preventDefault();
+        setAddUserError('');
+        const fd = new FormData(e.target);
+        
+        const name = fd.get('name');
+        const email = fd.get('email');
+        const phone = fd.get('phone');
+        const role = fd.get('role');
+        const password = fd.get('password');
+
+        if (usersList.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+            setAddUserError('An account with this email already exists.');
+            return;
+        }
+
+        try {
+            const passwordHash = await hashPassword(password);
+            const newUser = {
+                id: role === 'tech' ? `tech-${Date.now()}` : `user-${Date.now()}`,
+                name,
+                email,
+                phone,
+                passwordHash,
+                role
+            };
+
+            const updatedUsers = [...usersList, newUser];
+            setUsersList(updatedUsers);
+            localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
+
+            // If new user is a tech, sync with booking technicians list
+            if (role === 'tech') {
+                const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                currentTechs.push({
+                    id: newUser.id,
+                    name: newUser.name,
+                    email: newUser.email
+                });
+                localStorage.setItem('technicians', JSON.stringify(currentTechs));
+            }
+
+            setIsAddingUser(false);
+        } catch (err) {
+            setAddUserError('Failed to create account.');
         }
     };
 
@@ -467,24 +525,41 @@ const TechDashboard = () => {
                                     <Users size={20} color="var(--color-primary)" /> User Accounts Management
                                 </h2>
                                 <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                                    View registered customer and technician accounts, or delete them as needed.
+                                    View registered customer and technician accounts, or manage them as needed.
                                 </p>
                             </div>
                             
-                            <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', maxWidth: '500px', marginLeft: 'auto' }}>
                                 <input
                                     type="text"
-                                    placeholder="Search by name or email..."
+                                    placeholder="Search name/email..."
                                     value={searchUserQuery}
                                     onChange={(e) => setSearchUserQuery(e.target.value)}
                                     style={{
-                                        width: '100%',
+                                        flex: 1,
                                         padding: '0.5rem 1rem',
                                         borderRadius: '6px',
                                         border: '1px solid #ddd',
                                         fontSize: '0.9rem'
                                     }}
                                 />
+                                <button 
+                                    onClick={() => { setIsAddingUser(true); setAddUserError(''); }}
+                                    style={{
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '0.5rem', 
+                                        backgroundColor: 'var(--color-primary)', 
+                                        color: 'var(--color-secondary)', 
+                                        padding: '0.5rem 1rem', 
+                                        borderRadius: '6px', 
+                                        fontWeight: '600',
+                                        border: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <Plus size={16} /> Add User
+                                </button>
                             </div>
                         </div>
 
@@ -660,6 +735,66 @@ const TechDashboard = () => {
                         
                         <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', borderRadius: '6px', fontWeight: 'bold' }}>
                             Save Service
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* Add User Modal */}
+            {isAddingUser && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+                }}>
+                    <form onSubmit={handleCreateUser} style={{
+                        backgroundColor: 'var(--color-white)', padding: '2rem', borderRadius: '12px', maxWidth: '450px', width: '90%', position: 'relative'
+                    }}>
+                        <button type="button" onClick={() => setIsAddingUser(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <X size={20} />
+                        </button>
+
+                        <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}>Create User Account</h3>
+                        
+                        {addUserError && (
+                            <div style={{
+                                backgroundColor: '#fee2e2',
+                                color: '#dc2626',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                fontSize: '0.875rem'
+                            }}>
+                                {addUserError}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Full Name</label>
+                                <input type="text" name="name" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Email Address</label>
+                                <input type="email" name="email" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone Number</label>
+                                <input type="tel" name="phone" placeholder="555-0100" style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Account Role</label>
+                                <select name="role" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}>
+                                    <option value="customer">Customer (Client)</option>
+                                    <option value="tech">Nail Technician</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Password</label>
+                                <input type="password" name="password" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                        </div>
+                        
+                        <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                            Create Account
                         </button>
                     </form>
                 </div>
