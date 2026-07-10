@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, User, Phone, Users, Lock } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Users, Lock, PenTool, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const timeSlots = [
@@ -29,6 +29,11 @@ const Booking = () => {
 
     const [isBookingForSomeoneElse, setIsBookingForSomeoneElse] = useState(false);
     const [existingBookings, setExistingBookings] = useState([]);
+
+    // Design Details state
+    const [designNotes, setDesignNotes] = useState('');
+    const [designPictures, setDesignPictures] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         if (user && !isBookingForSomeoneElse) {
@@ -126,6 +131,38 @@ const Booking = () => {
         return parseInt(hours + minutes, 10);
     };
 
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 500;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                    else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+        });
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        setIsUploading(true);
+        const compressed = await Promise.all(files.map(f => compressImage(f)));
+        setDesignPictures(prev => [...prev, ...compressed]);
+        setIsUploading(false);
+        e.target.value = '';
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         
@@ -157,7 +194,9 @@ const Booking = () => {
             createdAt: new Date().toISOString(),
             email: user?.email || 'guest@example.com',
             bookedBy: user?.email,
-            status: 'Pending'
+            status: 'Pending',
+            notes: designNotes,
+            pictures: designPictures
         };
 
         const currentBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
@@ -369,6 +408,72 @@ const Booking = () => {
                     </div>
                 </div>
 
+                {/* Design Details */}
+                <div style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <PenTool size={18} color="var(--color-primary)" /> Design Details
+                        <span style={{ fontSize: '0.8rem', fontWeight: '400', opacity: 0.6, marginLeft: '0.25rem' }}>(optional)</span>
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1rem' }}>
+                        Share any inspiration notes or reference photos so your technician can prepare.
+                    </p>
+
+                    <textarea
+                        value={designNotes}
+                        onChange={(e) => setDesignNotes(e.target.value)}
+                        placeholder="E.g., chrome french tips with star accents, pastel pink base..."
+                        style={{
+                            width: '100%',
+                            minHeight: '90px',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            border: '1px solid #ddd',
+                            fontFamily: 'inherit',
+                            marginBottom: '1rem',
+                            resize: 'vertical',
+                            fontSize: '0.9rem'
+                        }}
+                    />
+
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem' }}>Reference Photos:</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-start' }}>
+                            {/* Upload trigger tile */}
+                            <label style={{
+                                width: '64px', height: '64px', borderRadius: '8px',
+                                border: '2px dashed #ccc', display: 'flex', flexDirection: 'column',
+                                justifyContent: 'center', alignItems: 'center',
+                                cursor: isUploading ? 'wait' : 'pointer',
+                                opacity: isUploading ? 0.6 : 1,
+                                backgroundColor: '#fafafa', color: '#888'
+                            }}>
+                                <Upload size={18} />
+                                <span style={{ fontSize: '0.65rem', marginTop: '2px' }}>{isUploading ? '...' : 'Upload'}</span>
+                                <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} disabled={isUploading} style={{ display: 'none' }} />
+                            </label>
+
+                            {/* Thumbnail grid */}
+                            {designPictures.map((pic, idx) => (
+                                <div key={idx} style={{ width: '64px', height: '64px', position: 'relative', borderRadius: '8px', border: '1px solid #eee', overflow: 'hidden' }}>
+                                    <img src={pic} alt="design ref" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <button
+                                        type="button"
+                                        onClick={() => setDesignPictures(prev => prev.filter((_, i) => i !== idx))}
+                                        style={{
+                                            position: 'absolute', top: '2px', right: '2px',
+                                            backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff',
+                                            border: 'none', borderRadius: '50%', width: '16px', height: '16px',
+                                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                            cursor: 'pointer', padding: 0
+                                        }}
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
                 <button
                     type="submit"
                     disabled={!formData.time || !formData.date}
