@@ -89,7 +89,7 @@ export const initializeData = () => {
             name: 'Sarah (Owner)',
             email: 'sarah@example.com',
             phone: '555-0100',
-            passwordHash: '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200', // SHA-256 for admin123
+            passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // SHA-256 for admin123
             role: 'tech'
         },
         {
@@ -97,13 +97,35 @@ export const initializeData = () => {
             name: 'Jessica',
             email: 'jessica@example.com',
             phone: '555-0101',
-            passwordHash: '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200', // SHA-256 for admin123
+            passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // SHA-256 for admin123
             role: 'tech'
         }
     ];
 
-    if (!localStorage.getItem('nail_nook_users')) {
-        localStorage.setItem('nail_nook_users', JSON.stringify(defaultUsers));
+    let users = [];
+    try {
+        users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+    } catch (e) {
+        users = [];
+    }
+
+    let modified = false;
+    defaultUsers.forEach(defaultUser => {
+        const index = users.findIndex(u => u.email.toLowerCase() === defaultUser.email.toLowerCase());
+        if (index === -1) {
+            users.push(defaultUser);
+            modified = true;
+        } else {
+            // Fix incorrect legacy hash if present in browser storage
+            if (users[index].passwordHash === '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200') {
+                users[index].passwordHash = defaultUser.passwordHash;
+                modified = true;
+            }
+        }
+    });
+
+    if (modified || !localStorage.getItem('nail_nook_users')) {
+        localStorage.setItem('nail_nook_users', JSON.stringify(users));
     }
 };
 
