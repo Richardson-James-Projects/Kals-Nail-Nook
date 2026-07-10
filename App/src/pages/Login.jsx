@@ -19,19 +19,7 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            // Simple mock validation
-            if (isTech) {
-                if (password !== 'admin123') { // Simple mock password for tech
-                    throw new Error('Invalid tech credentials (hint: use admin123)');
-                }
-            }
-
-            await login(isTech ? 'tech' : 'customer', {
-                id: Date.now().toString(),
-                name: isTech ? 'Nail Tech' : email.split('@')[0],
-                email
-            });
-
+            await login(email, password, isTech ? 'tech' : 'customer');
             navigate(isTech ? '/tech-dashboard' : '/dashboard');
         } catch (err) {
             setError(err.message || 'Failed to login');

@@ -27,15 +27,10 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            await register({
-                id: Date.now().toString(),
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone
-            });
+            await register(formData.name, formData.email, formData.phone, formData.password);
             navigate('/dashboard');
         } catch (err) {
-            setError('Failed to register');
+            setError(err.message || 'Failed to register');
         } finally {
             setIsLoading(false);
         }

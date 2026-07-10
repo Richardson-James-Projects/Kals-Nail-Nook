@@ -81,4 +81,29 @@ export const initializeData = () => {
             }
         }
     });
+
+    // Default Users (with pre-hashed 'admin123' passwords)
+    const defaultUsers = [
+        {
+            id: 'tech-sarah',
+            name: 'Sarah (Owner)',
+            email: 'sarah@example.com',
+            phone: '555-0100',
+            passwordHash: '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200', // SHA-256 for admin123
+            role: 'tech'
+        },
+        {
+            id: 'tech-jessica',
+            name: 'Jessica',
+            email: 'jessica@example.com',
+            phone: '555-0101',
+            passwordHash: '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200', // SHA-256 for admin123
+            role: 'tech'
+        }
+    ];
+
+    if (!localStorage.getItem('nail_nook_users')) {
+        localStorage.setItem('nail_nook_users', JSON.stringify(defaultUsers));
+    }
 };
+

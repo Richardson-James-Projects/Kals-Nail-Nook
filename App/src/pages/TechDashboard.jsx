@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, User, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban } from 'lucide-react';
+import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -30,6 +30,9 @@ const TechDashboard = () => {
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const [scheduleMessage, setScheduleMessage] = useState('');
 
+    const [usersList, setUsersList] = useState([]);
+    const [searchUserQuery, setSearchUserQuery] = useState('');
+
     useEffect(() => {
         const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
         // We find the matching tech by email, or fallback if testing locally
@@ -49,6 +52,9 @@ const TechDashboard = () => {
 
         const lServices = JSON.parse(localStorage.getItem('services') || '[]');
         setServices(lServices);
+
+        const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+        setUsersList(allUsers);
     }, [user]);
 
     // --- APPOINTMENT ACTIONS ---
@@ -143,6 +149,22 @@ const TechDashboard = () => {
             const updated = services.filter(s => s.id !== id);
             setServices(updated);
             localStorage.setItem('services', JSON.stringify(updated));
+        }
+    };
+
+    const handleDeleteUser = (userId) => {
+        const targetUser = usersList.find(u => u.id === userId);
+        if (!targetUser) return;
+        
+        if (targetUser.email === user?.email) {
+            alert("You cannot delete your own logged-in account!");
+            return;
+        }
+
+        if (window.confirm(`Are you sure you want to delete the account for ${targetUser.name} (${targetUser.email})? This action cannot be undone.`)) {
+            const updated = usersList.filter(u => u.id !== userId);
+            setUsersList(updated);
+            localStorage.setItem('nail_nook_users', JSON.stringify(updated));
         }
     };
 
@@ -420,6 +442,131 @@ const TechDashboard = () => {
                                     {s.popular && <span style={{ position: 'absolute', top: '-10px', right: '10px', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bolf' }}>POPULAR</span>}
                                 </div>
                             ))}
+                        </div>
+                    </section>
+                </div>
+
+                {/* 4. User Accounts Management */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                    <section style={{
+                        backgroundColor: 'var(--color-white)',
+                        borderRadius: '12px',
+                        padding: '2rem',
+                        boxShadow: 'var(--shadow-sm)'
+                    }}>
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            marginBottom: '1.5rem',
+                            flexWrap: 'wrap',
+                            gap: '1rem'
+                        }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Users size={20} color="var(--color-primary)" /> User Accounts Management
+                                </h2>
+                                <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                                    View registered customer and technician accounts, or delete them as needed.
+                                </p>
+                            </div>
+                            
+                            <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Search by name or email..."
+                                    value={searchUserQuery}
+                                    onChange={(e) => setSearchUserQuery(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid #ddd',
+                                        fontSize: '0.9rem'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Accounts List Table */}
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{
+                                width: '100%',
+                                borderCollapse: 'collapse',
+                                fontSize: '0.9rem',
+                                textAlign: 'left',
+                                minWidth: '600px'
+                            }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#f9f9f9', borderBottom: '2px solid #eee' }}>
+                                        <th style={{ padding: '1rem' }}>Name</th>
+                                        <th style={{ padding: '1rem' }}>Email</th>
+                                        <th style={{ padding: '1rem' }}>Phone</th>
+                                        <th style={{ padding: '1rem' }}>Role</th>
+                                        <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {usersList
+                                        .filter(u => 
+                                            u.name.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
+                                            u.email.toLowerCase().includes(searchUserQuery.toLowerCase())
+                                        )
+                                        .map((u) => (
+                                            <tr key={u.id} style={{ 
+                                                borderBottom: '1px solid #eee',
+                                                backgroundColor: u.email === user?.email ? '#f0f9ff' : 'transparent',
+                                                transition: 'background-color 0.2s'
+                                            }}>
+                                                <td style={{ padding: '1rem', fontWeight: '500' }}>
+                                                    {u.name} {u.email === user?.email && <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem' }}>You</span>}
+                                                </td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{u.email}</td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{u.phone || 'N/A'}</td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <span style={{ 
+                                                        fontSize: '0.8rem', 
+                                                        padding: '0.2rem 0.5rem', 
+                                                        borderRadius: '12px',
+                                                        fontWeight: '600',
+                                                        backgroundColor: u.role === 'tech' ? '#fee2e2' : '#e0e7ff',
+                                                        color: u.role === 'tech' ? '#991b1b' : '#3730a3'
+                                                    }}>
+                                                        {u.role}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                                    <button 
+                                                        onClick={() => handleDeleteUser(u.id)}
+                                                        disabled={u.email === user?.email}
+                                                        style={{
+                                                            border: 'none',
+                                                            background: 'none',
+                                                            color: u.email === user?.email ? '#ccc' : '#ef4444',
+                                                            cursor: u.email === user?.email ? 'not-allowed' : 'pointer',
+                                                            padding: '4px',
+                                                            borderRadius: '4px',
+                                                            transition: 'background-color 0.2s'
+                                                        }}
+                                                        title={u.email === user?.email ? "You cannot delete your own account" : "Delete account"}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    {usersList.filter(u => 
+                                        u.name.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
+                                        u.email.toLowerCase().includes(searchUserQuery.toLowerCase())
+                                    ).length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
+                                                No matching accounts found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </section>
                 </div>

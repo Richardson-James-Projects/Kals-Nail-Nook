@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { hashPassword } from '../utils/crypto';
 
 const AuthContext = createContext(null);
 
@@ -15,26 +16,58 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = async (role, userData) => {
+    const login = async (email, password, role) => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const newUser = { ...userData, role };
-        setUser(newUser);
-        localStorage.setItem('nail_nook_user', JSON.stringify(newUser));
-        return newUser;
+        const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+        const foundUser = users.find(
+            u => u.email.toLowerCase() === email.toLowerCase() && u.role === role
+        );
+
+        if (!foundUser) {
+            throw new Error('Invalid email or password.');
+        }
+
+        const hashedPassword = await hashPassword(password);
+        if (foundUser.passwordHash !== hashedPassword) {
+            throw new Error('Invalid email or password.');
+        }
+
+        const { passwordHash, ...sessionUser } = foundUser;
+        setUser(sessionUser);
+        localStorage.setItem('nail_nook_user', JSON.stringify(sessionUser));
+        return sessionUser;
     };
 
-    const register = async (userData) => {
+    const register = async (name, email, phone, password) => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // In a real app we'd check if user exists, etc.
-        // For prototype, we just log them in as customer
-        const newUser = { ...userData, role: 'customer' };
-        setUser(newUser);
-        localStorage.setItem('nail_nook_user', JSON.stringify(newUser));
-        return newUser;
+        const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+        const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+
+        if (emailExists) {
+            throw new Error('An account with this email already exists.');
+        }
+
+        const passwordHash = await hashPassword(password);
+        const newUser = {
+            id: `user-${Date.now()}`,
+            name,
+            email,
+            phone,
+            passwordHash,
+            role: 'customer'
+        };
+
+        users.push(newUser);
+        localStorage.setItem('nail_nook_users', JSON.stringify(users));
+
+        const { passwordHash: _, ...sessionUser } = newUser;
+        setUser(sessionUser);
+        localStorage.setItem('nail_nook_user', JSON.stringify(sessionUser));
+        return sessionUser;
     };
 
     const logout = () => {
