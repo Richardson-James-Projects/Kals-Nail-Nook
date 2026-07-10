@@ -95,13 +95,14 @@ const TechDashboard = () => {
     };
 
     // --- CLIENT NOTES ACTIONS ---
-    const viewClientNotes = (clientEmail) => {
-        const customerText = localStorage.getItem(`notes_${clientEmail}`) || 'No notes saved by this client.';
-        const internalText = localStorage.getItem(`tech_notes_${clientEmail}`) || '';
-        
+    const viewClientNotes = (appt) => {
+        const internalText = localStorage.getItem(`tech_notes_${appt.email}`) || '';
         setSelectedClientNote({
-            email: clientEmail,
-            customerText,
+            apptId: appt.id,
+            name: appt.name,
+            email: appt.email,
+            customerText: appt.notes || 'No specific notes added for this appointment.',
+            customerPictures: appt.pictures || [],
             internalText
         });
     };
@@ -448,7 +449,7 @@ const TechDashboard = () => {
 
                                         <div style={{ textAlign: 'right' }}>
                                             <button
-                                                onClick={() => viewClientNotes(appt.email)}
+                                                onClick={() => viewClientNotes(appt)}
                                                 style={{
                                                     padding: '0.4rem 0.8rem',
                                                     fontSize: '0.8rem',
@@ -814,37 +815,81 @@ const TechDashboard = () => {
                     <div style={{
                         backgroundColor: 'var(--color-white)', padding: '2rem', borderRadius: '12px', maxWidth: '600px', width: '90%', position: 'relative'
                     }}>
-                        <button onClick={() => setSelectedClientNote(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none' }}>
+                        <button onClick={() => setSelectedClientNote(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}>
                             <X size={20} />
                         </button>
 
                         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <FileText size={20} color="var(--color-primary)" /> Client File
+                            <FileText size={20} color="var(--color-primary)" /> Client File & Appointment Details
                         </h3>
-                        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#666' }}>Record for: <strong>{selectedClientNote.email}</strong></p>
+                        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#666' }}>
+                            Client: <strong>{selectedClientNote.name}</strong> ({selectedClientNote.email})
+                        </p>
                         
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.5rem' }}>Client's Design Comments:</label>
-                            <div style={{ backgroundColor: '#fbfbfb', padding: '1rem', borderRadius: '8px', border: '1px solid #eee', minHeight: '60px', fontStyle: 'italic', opacity: 0.8 }}>
-                                "{selectedClientNote.customerText}"
-                            </div>
-                        </div>
+                        <div style={{ display: 'grid', gap: '1.5rem', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+                            {/* Section 1: Customer's Notes for this Appointment */}
+                            <div style={{ borderBottom: '1px solid #eee', paddingBottom: '1.5rem' }}>
+                                <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem' }}>
+                                    Client's Appointment Request:
+                                </label>
+                                <div style={{ backgroundColor: '#fcfcfc', padding: '1rem', borderRadius: '8px', border: '1px solid #f0f0f0', fontStyle: 'italic', color: '#333', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                                    "{selectedClientNote.customerText}"
+                                </div>
 
-                        <div>
-                            <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.5rem' }}>Internal Technician Notes:</label>
-                            <textarea 
-                                value={selectedClientNote.internalText}
-                                onChange={(e) => setSelectedClientNote({...selectedClientNote, internalText: e.target.value})}
-                                style={{ width: '100%', minHeight: '100px', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit', resize: 'vertical' }}
-                                placeholder="Allergies, preferred shape, specific polishes used..."
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-                                <span id="note-saved-msg" style={{ color: 'green', fontSize: '0.85rem', opacity: 0, transition: 'opacity 0.3s' }}>Internal Notes Saved!</span>
-                                <button onClick={saveInternalNote} style={{
-                                    backgroundColor: 'var(--color-secondary)', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                                }}>
-                                    <Save size={16} /> Save Notes
-                                </button>
+                                {selectedClientNote.customerPictures && selectedClientNote.customerPictures.length > 0 && (
+                                    <div>
+                                        <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: '#666' }}>
+                                            Attached Inspiration Images (click to view):
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                            {selectedClientNote.customerPictures.map((pic, idx) => (
+                                                <a key={idx} href={pic} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                                                    <img 
+                                                        src={pic} 
+                                                        alt="Client attachment" 
+                                                        style={{ 
+                                                            width: '70px', 
+                                                            height: '70px', 
+                                                            objectFit: 'cover', 
+                                                            borderRadius: '6px', 
+                                                            border: '1px solid #ddd',
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s'
+                                                        }} 
+                                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Section 2: Internal Tech Notes (Private) */}
+                            <div>
+                                <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.25rem', fontSize: '0.95rem' }}>
+                                    Internal Tech File (Private):
+                                </label>
+                                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>
+                                    Customers cannot see these notes. Keep track of polishes used, style history, shape preference, or allergies.
+                                </p>
+                                <textarea 
+                                    value={selectedClientNote.internalText}
+                                    onChange={(e) => setSelectedClientNote({...selectedClientNote, internalText: e.target.value})}
+                                    style={{ width: '100%', minHeight: '120px', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit', resize: 'vertical' }}
+                                    placeholder="Add allergy alerts, size metrics, specific colors used, etc."
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                                    <span id="note-saved-msg" style={{ color: 'green', fontSize: '0.85rem', opacity: 0, transition: 'opacity 0.3s' }}>
+                                        Notes saved to client file!
+                                    </span>
+                                    <button onClick={saveInternalNote} style={{
+                                        backgroundColor: 'var(--color-secondary)', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600'
+                                    }}>
+                                        <Save size={16} /> Save Notes
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

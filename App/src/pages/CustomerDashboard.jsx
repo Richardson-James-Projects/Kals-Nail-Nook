@@ -1,22 +1,91 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, PenTool, Save } from 'lucide-react';
+import { Calendar, PenTool, Save, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const CustomerDashboard = () => {
     const { user } = useAuth();
     const [appointments, setAppointments] = useState([]);
-    const [designNotes, setDesignNotes] = useState('');
-    const [showSaveMsg, setShowSaveMsg] = useState(false);
+    
+    // Appointment specific notes
+    const [editingAppt, setEditingAppt] = useState(null);
+    const [tempNotes, setTempNotes] = useState('');
+    const [tempPictures, setTempPictures] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
         const myBookings = allBookings.filter(b => b.name === user.name || b.email === user.email);
         setAppointments(myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
-
-        const storedNotes = localStorage.getItem(`notes_${user.email}`);
-        if (storedNotes) setDesignNotes(storedNotes);
     }, [user]);
+
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500;
+                    const MAX_HEIGHT = 500;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+        });
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        setIsUploading(true);
+
+        const promises = files.map(file => compressImage(file));
+        const compressedBase64s = await Promise.all(promises);
+
+        setTempPictures(prev => [...prev, ...compressedBase64s]);
+        setIsUploading(false);
+        e.target.value = '';
+    };
+
+    const handleSaveApptNotes = () => {
+        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+        const updated = allBookings.map(b => b.id === editingAppt.id ? { ...b, notes: tempNotes, pictures: tempPictures } : b);
+        localStorage.setItem('bookings', JSON.stringify(updated));
+
+        setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+        setEditingAppt(null);
+    };
+
+    const handleDeleteApptNotes = (apptId) => {
+        if (window.confirm('Are you sure you want to delete the notes and photos for this appointment?')) {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const updated = allBookings.map(b => b.id === apptId ? { ...b, notes: '', pictures: [] } : b);
+            localStorage.setItem('bookings', JSON.stringify(updated));
+
+            setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+        }
+    };
 
     const handleCancel = (id) => {
         if(window.confirm('Are you sure you want to cancel this appointment?')){
@@ -110,17 +179,49 @@ const CustomerDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Appointment specific previews */}
+                                                {(appt.notes || (appt.pictures && appt.pictures.length > 0)) && (
+                                                    <div style={{ margin: '0.5rem 0 1.25rem 0', padding: '1rem', backgroundColor: '#fafafa', border: '1px solid #eee', borderRadius: '8px' }}>
+                                                        {appt.notes && (
+                                                            <p style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', fontStyle: 'italic', color: '#555' }}>
+                                                                "{(appt.notes.length > 80 ? appt.notes.substring(0, 80) + '...' : appt.notes)}"
+                                                            </p>
+                                                        )}
+                                                        {appt.pictures && appt.pictures.length > 0 && (
+                                                            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                                {appt.pictures.map((pic, idx) => (
+                                                                    <img key={idx} src={pic} alt="Design reference" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                                     <a href={generateGoogleCalendarUrl(appt)} target="_blank" rel="noopener noreferrer" style={{
                                                          display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', backgroundColor: '#fff', border: '1px solid var(--color-primary)', color: 'var(--color-primary)', borderRadius: '6px', fontWeight: '500', fontSize: '0.8rem', textDecoration: 'none'
                                                     }}>
                                                         <Calendar size={14} /> Add to Calendar
                                                     </a>
+                                                    
+                                                    <button 
+                                                        onClick={() => {
+                                                            setEditingAppt(appt);
+                                                            setTempNotes(appt.notes || '');
+                                                            setTempPictures(appt.pictures || []);
+                                                        }}
+                                                        style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', backgroundColor: 'var(--color-secondary)', border: 'none', color: '#fff', borderRadius: '6px', fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <PenTool size={14} /> Design Details
+                                                    </button>
+
                                                     <button onClick={() => handleCancel(appt.id)} style={{
-                                                        backgroundColor: 'transparent', border: 'none', color: '#ef4444', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8rem'
+                                                         backgroundColor: 'transparent', border: 'none', color: '#ef4444', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8rem', marginLeft: 'auto'
                                                     }}>
-                                                        Cancel
+                                                         Cancel
                                                     </button>
                                                 </div>
                                             </div>
@@ -130,7 +231,7 @@ const CustomerDashboard = () => {
 
                                 {past.length > 0 && (
                                     <>
-                                        <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <Calendar size={20} color="#94a3b8" /> Past & Cancelled 
                                         </h2>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -151,9 +252,34 @@ const CustomerDashboard = () => {
                                                             {appt.status || 'Completed'}
                                                         </span>
                                                     </div>
-                                                    <div style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                                                    <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: (appt.notes || (appt.pictures && appt.pictures.length > 0)) ? '1rem' : '0' }}>
                                                         {new Date(appt.date).toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
                                                     </div>
+
+                                                    {(appt.notes || (appt.pictures && appt.pictures.length > 0)) && (
+                                                        <div style={{ margin: '1rem 0 0 0', padding: '1rem', backgroundColor: '#fafafa', border: '1px solid #eee', borderRadius: '8px' }}>
+                                                            {appt.notes && (
+                                                                <p style={{ fontSize: '0.85rem', margin: '0 0 0.75rem 0', fontStyle: 'italic', color: '#666' }}>
+                                                                    "{appt.notes}"
+                                                                </p>
+                                                            )}
+                                                            {appt.pictures && appt.pictures.length > 0 && (
+                                                                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                                    {appt.pictures.map((pic, idx) => (
+                                                                        <img key={idx} src={pic} alt="Design reference" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            <button 
+                                                                onClick={() => handleDeleteApptNotes(appt.id)}
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.75rem', padding: '0.3rem 0.6rem', backgroundColor: '#fee2e2', border: 'none', color: '#b91c1c', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <Trash2 size={12} /> Delete Notes & Photos
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -163,64 +289,97 @@ const CustomerDashboard = () => {
                         );
                     })()}
                 </section>
+            </div>
 
-                {/* Design Preferences Section */}
-                <section>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <PenTool size={20} color="var(--color-primary)" /> Style & Design Notes
-                    </h2>
-
+            {/* Modal for editing appointment notes and photos */}
+            {editingAppt && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+                }}>
                     <div style={{
-                        backgroundColor: 'var(--color-white)',
-                        padding: '1.5rem',
-                        borderRadius: '12px',
-                        boxShadow: 'var(--shadow-sm)'
+                        backgroundColor: 'var(--color-white)', padding: '2rem', borderRadius: '12px', maxWidth: '500px', width: '90%', position: 'relative'
                     }}>
-                        <p style={{ fontSize: '0.9rem', opacity: 0.7, marginBottom: '1rem' }}>
-                            Add notes about colors you love, designs you want to try, or any allergies/sensitivities.
+                        <button type="button" onClick={() => setEditingAppt(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <X size={20} />
+                        </button>
+
+                        <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-primary)' }}>Appointment Design Details</h3>
+                        <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1.5rem' }}>
+                            {editingAppt.serviceName} — {new Date(editingAppt.date).toLocaleDateString()}
                         </p>
 
-                        <textarea
-                            value={designNotes}
-                            onChange={(e) => setDesignNotes(e.target.value)}
-                            placeholder="E.g., I love pastels, want to try chrome powder next time..."
-                            style={{
-                                width: '100%',
-                                minHeight: '150px',
-                                padding: '1rem',
-                                borderRadius: '8px',
-                                border: '1px solid #eee',
-                                fontFamily: 'inherit',
-                                marginBottom: '1rem',
-                                resize: 'vertical'
-                            }}
-                        />
+                        <div style={{ display: 'grid', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: '500' }}>Add notes for the technician:</label>
+                                <textarea
+                                    value={tempNotes}
+                                    onChange={(e) => setTempNotes(e.target.value)}
+                                    placeholder="Enter your design request, colors, shapes, patterns..."
+                                    style={{ width: '100%', minHeight: '100px', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', fontFamily: 'inherit', resize: 'vertical' }}
+                                />
+                            </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <button
-                                onClick={handleSaveNotes}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    backgroundColor: 'var(--color-secondary)',
-                                    color: 'var(--color-white)',
-                                    padding: '0.6rem 1.2rem',
-                                    borderRadius: '8px',
-                                    fontWeight: '500',
-                                    fontSize: '0.9rem'
-                                }}
-                            >
-                                <Save size={16} /> Save Notes
-                            </button>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: '500' }}>Reference Photos (Inspirations):</label>
+                                
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                    {/* Upload trigger */}
+                                    <label style={{
+                                        width: '64px',
+                                        height: '64px',
+                                        borderRadius: '8px',
+                                        border: '2px dashed #ccc',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        cursor: isUploading ? 'wait' : 'pointer',
+                                        opacity: isUploading ? 0.6 : 1,
+                                        backgroundColor: '#fafafa',
+                                        color: '#666',
+                                        transition: 'border-color 0.2s'
+                                    }}>
+                                        <Upload size={18} />
+                                        <span style={{ fontSize: '0.65rem', marginTop: '2px' }}>{isUploading ? '...' : 'Upload'}</span>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            multiple 
+                                            onChange={handlePhotoUpload} 
+                                            disabled={isUploading}
+                                            style={{ display: 'none' }} 
+                                        />
+                                    </label>
 
-                            {showSaveMsg && (
-                                <span style={{ color: 'green', fontSize: '0.85rem' }}>Saved!</span>
-                            )}
+                                    {/* Thumbnails grid */}
+                                    {tempPictures.map((pic, idx) => (
+                                        <div key={idx} style={{ width: '64px', height: '64px', position: 'relative', borderRadius: '8px', border: '1px solid #eee', overflow: 'hidden' }}>
+                                            <img src={pic} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setTempPictures(prev => prev.filter((_, i) => i !== idx))}
+                                                style={{
+                                                    position: 'absolute', top: '2px', right: '2px', backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', padding: '0'
+                                                }}
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
+
+                        <button 
+                            type="button"
+                            onClick={handleSaveApptNotes}
+                            style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                            Save Design Details
+                        </button>
                     </div>
-                </section>
-            </div>
+                </div>
+            )}
         </div>
     );
 };
