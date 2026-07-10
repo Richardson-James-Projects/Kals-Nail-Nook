@@ -21,9 +21,13 @@ export const AuthProvider = ({ children }) => {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
-        const foundUser = users.find(
-            u => u.email.toLowerCase() === email.toLowerCase() && u.role === role
-        );
+        const foundUser = users.find(u => {
+            const emailMatch = u.email.toLowerCase() === email.toLowerCase();
+            if (role === 'tech') {
+                return emailMatch && (u.role === 'tech' || u.role === 'owner');
+            }
+            return emailMatch && u.role === role;
+        });
 
         if (!foundUser) {
             throw new Error('Invalid email or password.');

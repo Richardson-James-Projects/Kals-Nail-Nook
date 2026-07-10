@@ -15,7 +15,7 @@ import { initializeData } from './utils/data'
 initializeData();
 
 // Protected Route Component
-const ProtectedRoute = ({ children, role }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children, role }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (role && user.role !== role) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
@@ -48,13 +48,13 @@ function App() {
 
             {/* Protected Pages */}
             <Route path="dashboard" element={
-              <ProtectedRoute role="customer">
+              <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerDashboard />
               </ProtectedRoute>
             } />
 
             <Route path="tech-dashboard" element={
-              <ProtectedRoute role="tech">
+              <ProtectedRoute allowedRoles={['tech', 'owner']}>
                 <TechDashboard />
               </ProtectedRoute>
             } />

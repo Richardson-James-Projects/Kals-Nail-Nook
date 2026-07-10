@@ -90,7 +90,7 @@ export const initializeData = () => {
             email: 'sarah@example.com',
             phone: '555-0100',
             passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // SHA-256 for admin123
-            role: 'tech'
+            role: 'owner'
         },
         {
             id: 'tech-jessica',
@@ -119,6 +119,11 @@ export const initializeData = () => {
             // Fix incorrect legacy hash if present in browser storage
             if (users[index].passwordHash === '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200') {
                 users[index].passwordHash = defaultUser.passwordHash;
+                modified = true;
+            }
+            // Migrate legacy role for Sarah to 'owner'
+            if (defaultUser.email === 'sarah@example.com' && users[index].role !== 'owner') {
+                users[index].role = 'owner';
                 modified = true;
             }
         }

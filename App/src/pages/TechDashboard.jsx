@@ -187,6 +187,16 @@ const TechDashboard = () => {
             return;
         }
 
+        if (targetUser.role === 'owner') {
+            alert("Owner accounts cannot be deleted!");
+            return;
+        }
+
+        if (targetUser.role === 'tech' && user?.role !== 'owner') {
+            alert("Only the Owner can delete technician profiles!");
+            return;
+        }
+
         if (window.confirm(`Are you sure you want to delete the account for ${targetUser.name} (${targetUser.email})? This action cannot be undone.`)) {
             const updatedUsers = usersList.filter(u => u.id !== userId);
             setUsersList(updatedUsers);
@@ -728,29 +738,52 @@ const TechDashboard = () => {
                                                         padding: '0.2rem 0.5rem', 
                                                         borderRadius: '12px',
                                                         fontWeight: '600',
-                                                        backgroundColor: u.role === 'tech' ? '#fee2e2' : '#e0e7ff',
-                                                        color: u.role === 'tech' ? '#991b1b' : '#3730a3'
+                                                        backgroundColor: u.role === 'owner' ? '#fef3c7' : (u.role === 'tech' ? '#fee2e2' : '#e0e7ff'),
+                                                        color: u.role === 'owner' ? '#92400e' : (u.role === 'tech' ? '#991b1b' : '#3730a3')
                                                     }}>
                                                         {u.role}
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                                    <button 
-                                                        onClick={() => handleDeleteUser(u.id)}
-                                                        disabled={u.email === user?.email}
-                                                        style={{
-                                                            border: 'none',
-                                                            background: 'none',
-                                                            color: u.email === user?.email ? '#ccc' : '#ef4444',
-                                                            cursor: u.email === user?.email ? 'not-allowed' : 'pointer',
-                                                            padding: '4px',
-                                                            borderRadius: '4px',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        title={u.email === user?.email ? "You cannot delete your own account" : "Delete account"}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {(() => {
+                                                        const isOwnAccount = u.email === user?.email;
+                                                        const isTargetOwner = u.role === 'owner';
+                                                        const isTargetTech = u.role === 'tech';
+                                                        const isCurrentOwner = user?.role === 'owner';
+
+                                                        let isDisabled = false;
+                                                        let tooltipText = "Delete account";
+
+                                                        if (isOwnAccount) {
+                                                            isDisabled = true;
+                                                            tooltipText = "You cannot delete your own account";
+                                                        } else if (isTargetOwner) {
+                                                            isDisabled = true;
+                                                            tooltipText = "Owner accounts cannot be deleted";
+                                                        } else if (isTargetTech && !isCurrentOwner) {
+                                                            isDisabled = true;
+                                                            tooltipText = "Only the Owner can delete technicians";
+                                                        }
+
+                                                        return (
+                                                            <button 
+                                                                onClick={() => handleDeleteUser(u.id)}
+                                                                disabled={isDisabled}
+                                                                style={{
+                                                                    border: 'none',
+                                                                    background: 'none',
+                                                                    color: isDisabled ? '#ccc' : '#ef4444',
+                                                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                                    padding: '4px',
+                                                                    borderRadius: '4px',
+                                                                    transition: 'background-color 0.2s'
+                                                                }}
+                                                                title={tooltipText}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </td>
                                             </tr>
                                         ))}
