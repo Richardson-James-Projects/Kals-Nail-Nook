@@ -109,8 +109,19 @@ const TechDashboard = () => {
 
     const saveInternalNote = () => {
         localStorage.setItem(`tech_notes_${selectedClientNote.email}`, selectedClientNote.internalText);
-        const msg = document.getElementById('note-saved-msg');
-        if(msg) { msg.style.opacity = 1; setTimeout(()=> msg.style.opacity = 0, 2000); }
+        setSelectedClientNote(null);
+    };
+
+    // Opens private tech notes for a user without appointment context
+    const openUserNotes = (u) => {
+        const internalText = localStorage.getItem(`tech_notes_${u.email}`) || '';
+        setSelectedClientNote({
+            name: u.name,
+            email: u.email,
+            customerText: null,       // null signals: no appointment note to show
+            customerPictures: [],
+            internalText
+        });
     };
 
     // --- SCHEDULE ACTIONS ---
@@ -746,45 +757,69 @@ const TechDashboard = () => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                                    {(() => {
-                                                        const isOwnAccount = u.email === user?.email;
-                                                        const isTargetOwner = u.role === 'owner';
-                                                        const isTargetTech = u.role === 'tech';
-                                                        const isCurrentOwner = user?.role === 'owner';
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem' }}>
+                                                        {/* Notes button */}
+                                                        <button
+                                                            onClick={() => openUserNotes(u)}
+                                                            style={{
+                                                                border: 'none',
+                                                                background: '#f0f0f0',
+                                                                color: '#444',
+                                                                cursor: 'pointer',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.3rem',
+                                                                fontSize: '0.8rem',
+                                                                transition: 'background-color 0.2s'
+                                                            }}
+                                                            title="View / edit private client notes"
+                                                        >
+                                                            <FileText size={14} /> Notes
+                                                        </button>
 
-                                                        let isDisabled = false;
-                                                        let tooltipText = "Delete account";
+                                                        {/* Delete button */}
+                                                        {(() => {
+                                                            const isOwnAccount = u.email === user?.email;
+                                                            const isTargetOwner = u.role === 'owner';
+                                                            const isTargetTech = u.role === 'tech';
+                                                            const isCurrentOwner = user?.role === 'owner';
 
-                                                        if (isOwnAccount) {
-                                                            isDisabled = true;
-                                                            tooltipText = "You cannot delete your own account";
-                                                        } else if (isTargetOwner) {
-                                                            isDisabled = true;
-                                                            tooltipText = "Owner accounts cannot be deleted";
-                                                        } else if (isTargetTech && !isCurrentOwner) {
-                                                            isDisabled = true;
-                                                            tooltipText = "Only the Owner can delete technicians";
-                                                        }
+                                                            let isDisabled = false;
+                                                            let tooltipText = "Delete account";
 
-                                                        return (
-                                                            <button 
-                                                                onClick={() => handleDeleteUser(u.id)}
-                                                                disabled={isDisabled}
-                                                                style={{
-                                                                    border: 'none',
-                                                                    background: 'none',
-                                                                    color: isDisabled ? '#ccc' : '#ef4444',
-                                                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
-                                                                    padding: '4px',
-                                                                    borderRadius: '4px',
-                                                                    transition: 'background-color 0.2s'
-                                                                }}
-                                                                title={tooltipText}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        );
-                                                    })()}
+                                                            if (isOwnAccount) {
+                                                                isDisabled = true;
+                                                                tooltipText = "You cannot delete your own account";
+                                                            } else if (isTargetOwner) {
+                                                                isDisabled = true;
+                                                                tooltipText = "Owner accounts cannot be deleted";
+                                                            } else if (isTargetTech && !isCurrentOwner) {
+                                                                isDisabled = true;
+                                                                tooltipText = "Only the Owner can delete technicians";
+                                                            }
+
+                                                            return (
+                                                                <button 
+                                                                    onClick={() => handleDeleteUser(u.id)}
+                                                                    disabled={isDisabled}
+                                                                    style={{
+                                                                        border: 'none',
+                                                                        background: 'none',
+                                                                        color: isDisabled ? '#ccc' : '#ef4444',
+                                                                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                                        padding: '4px',
+                                                                        borderRadius: '4px',
+                                                                        transition: 'background-color 0.2s'
+                                                                    }}
+                                                                    title={tooltipText}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -820,51 +855,54 @@ const TechDashboard = () => {
                         </button>
 
                         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <FileText size={20} color="var(--color-primary)" /> Client File & Appointment Details
+                            <FileText size={20} color="var(--color-primary)" />
+                            {selectedClientNote.customerText !== null ? 'Client File & Appointment Details' : 'Client File — Private Notes'}
                         </h3>
                         <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#666' }}>
                             Client: <strong>{selectedClientNote.name}</strong> ({selectedClientNote.email})
                         </p>
                         
                         <div style={{ display: 'grid', gap: '1.5rem', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
-                            {/* Section 1: Customer's Notes for this Appointment */}
-                            <div style={{ borderBottom: '1px solid #eee', paddingBottom: '1.5rem' }}>
-                                <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem' }}>
-                                    Client's Appointment Request:
-                                </label>
-                                <div style={{ backgroundColor: '#fcfcfc', padding: '1rem', borderRadius: '8px', border: '1px solid #f0f0f0', fontStyle: 'italic', color: '#333', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
-                                    "{selectedClientNote.customerText}"
-                                </div>
-
-                                {selectedClientNote.customerPictures && selectedClientNote.customerPictures.length > 0 && (
-                                    <div>
-                                        <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: '#666' }}>
-                                            Attached Inspiration Images (click to view):
-                                        </label>
-                                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                            {selectedClientNote.customerPictures.map((pic, idx) => (
-                                                <a key={idx} href={pic} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
-                                                    <img 
-                                                        src={pic} 
-                                                        alt="Client attachment" 
-                                                        style={{ 
-                                                            width: '70px', 
-                                                            height: '70px', 
-                                                            objectFit: 'cover', 
-                                                            borderRadius: '6px', 
-                                                            border: '1px solid #ddd',
-                                                            cursor: 'pointer',
-                                                            transition: 'transform 0.2s'
-                                                        }} 
-                                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                                    />
-                                                </a>
-                                            ))}
-                                        </div>
+                            {/* Section 1: Customer's Appointment Notes — only shown from the schedule row */}
+                            {selectedClientNote.customerText !== null && (
+                                <div style={{ borderBottom: '1px solid #eee', paddingBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: '600', display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem' }}>
+                                        Client's Appointment Request:
+                                    </label>
+                                    <div style={{ backgroundColor: '#fcfcfc', padding: '1rem', borderRadius: '8px', border: '1px solid #f0f0f0', fontStyle: 'italic', color: '#333', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                                        "{selectedClientNote.customerText}"
                                     </div>
-                                )}
-                            </div>
+
+                                    {selectedClientNote.customerPictures && selectedClientNote.customerPictures.length > 0 && (
+                                        <div>
+                                            <label style={{ fontWeight: '500', display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: '#666' }}>
+                                                Attached Inspiration Images (click to view):
+                                            </label>
+                                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                {selectedClientNote.customerPictures.map((pic, idx) => (
+                                                    <a key={idx} href={pic} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                                                        <img 
+                                                            src={pic} 
+                                                            alt="Client attachment" 
+                                                            style={{ 
+                                                                width: '70px', 
+                                                                height: '70px', 
+                                                                objectFit: 'cover', 
+                                                                borderRadius: '6px', 
+                                                                border: '1px solid #ddd',
+                                                                cursor: 'pointer',
+                                                                transition: 'transform 0.2s'
+                                                            }} 
+                                                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                        />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Section 2: Internal Tech Notes (Private) */}
                             <div>
