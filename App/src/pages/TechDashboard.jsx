@@ -978,7 +978,7 @@ const TechDashboard = () => {
                                         const durNum = isAddOn ? '' : (parts[0] || '');
                                         const durUnit = isAddOn ? 'Add-on' : (['min','hr'].includes(parts[1]) ? parts[1] : 'min');
                                         return (
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
                                                 <input
                                                     type="number"
                                                     name="durationValue"
@@ -986,12 +986,12 @@ const TechDashboard = () => {
                                                     min="1"
                                                     placeholder="60"
                                                     required={durUnit !== 'Add-on'}
-                                                    style={{ width: '70px', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', textAlign: 'center' }}
+                                                    style={{ width: '65px', padding: '0.6rem', border: 'none', outline: 'none', borderRight: '1px solid #ddd', textAlign: 'center' }}
                                                 />
                                                 <select
                                                     name="durationUnit"
                                                     defaultValue={durUnit}
-                                                    style={{ flex: 1, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                                    style={{ flex: 1, padding: '0.6rem', border: 'none', outline: 'none', backgroundColor: '#fff', cursor: 'pointer' }}
                                                 >
                                                     <option value="min">min</option>
                                                     <option value="hr">hr</option>
