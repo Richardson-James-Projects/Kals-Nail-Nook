@@ -57,9 +57,16 @@ const Confirmation = () => {
                     </h3>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                             <div style={{ fontWeight: '600', minWidth: '80px' }}>Service:</div>
-                            <div>{booking.serviceName}</div>
+                            <div>
+                                <div>{booking.serviceName}</div>
+                                {booking.addons && booking.addons.length > 0 && (
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.25rem' }}>
+                                        + {booking.addons.map(a => a.split(' (')[0]).join(', ')}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

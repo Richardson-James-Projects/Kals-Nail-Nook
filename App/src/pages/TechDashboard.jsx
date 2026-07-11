@@ -855,11 +855,27 @@ const TechDashboard = () => {
                     booked_by: newBooking.bookedBy,
                     addons: newBooking.addons
                 };
-                const { error } = await supabase.from('bookings').insert([dbBooking]);
+                let { error } = await supabase.from('bookings').insert([dbBooking]);
                 if (error) {
-                    console.error('Error creating booking in Supabase:', error);
-                    setBookingError(`Database Error: ${error.message || 'Failed to save booking. Please ensure you have run the database migrations.'}`);
-                    return;
+                    if (error.message && error.message.includes('addons')) {
+                        console.warn('Supabase addons column missing, retrying booking insert with addons info appended to notes.');
+                        const fallbackBooking = { ...dbBooking };
+                        delete fallbackBooking.addons;
+                        if (newBooking.addons && newBooking.addons.length > 0) {
+                            const addonsStr = `Selected Add-ons: ${newBooking.addons.map(a => a.split(' (')[0]).join(', ')}`;
+                            fallbackBooking.notes = `[${addonsStr}]`;
+                        }
+                        const retryResult = await supabase.from('bookings').insert([fallbackBooking]);
+                        if (retryResult.error) {
+                            console.error('Error creating booking (fallback retry):', retryResult.error);
+                            setBookingError(`Database Error: ${retryResult.error.message || 'Failed to save booking.'}`);
+                            return;
+                        }
+                    } else {
+                        console.error('Error creating booking in Supabase:', error);
+                        setBookingError(`Database Error: ${error.message || 'Failed to save booking.'}`);
+                        return;
+                    }
                 }
             } catch (e) {
                 console.error('Error creating booking:', e);

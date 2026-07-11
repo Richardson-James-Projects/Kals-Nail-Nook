@@ -328,9 +328,25 @@ const Booking = () => {
                     booked_by: booking.bookedBy,
                     addons: booking.addons
                 };
-                const { error } = await supabase.from('bookings').insert([dbBooking]);
+                let { error } = await supabase.from('bookings').insert([dbBooking]);
                 if (error) {
-                    console.error('Error inserting booking in Supabase:', error);
+                    if (error.message && error.message.includes('addons')) {
+                        console.warn('Supabase addons column missing, retrying booking insert with addons info appended to notes.');
+                        const fallbackBooking = { ...dbBooking };
+                        delete fallbackBooking.addons;
+                        if (booking.addons && booking.addons.length > 0) {
+                            const addonsStr = `Selected Add-ons: ${booking.addons.map(a => a.split(' (')[0]).join(', ')}`;
+                            fallbackBooking.notes = fallbackBooking.notes 
+                                ? `${fallbackBooking.notes}\n\n[${addonsStr}]`
+                                : `[${addonsStr}]`;
+                        }
+                        const retryResult = await supabase.from('bookings').insert([fallbackBooking]);
+                        if (retryResult.error) {
+                            console.error('Error inserting booking (fallback retry):', retryResult.error);
+                        }
+                    } else {
+                        console.error('Error inserting booking in Supabase:', error);
+                    }
                 }
             } else {
                 const currentBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
