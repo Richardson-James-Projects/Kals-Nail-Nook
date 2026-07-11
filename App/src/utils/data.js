@@ -47,14 +47,36 @@ export const initializeData = () => {
         localStorage.setItem('services', JSON.stringify(defaultServices));
     }
 
-    // Default Technicians
+    // Default Technicians (Kallie is the sole default tech/owner)
     const defaultTechs = [
-        { id: 'tech-sarah', name: 'Sarah (Owner)', email: 'sarah@example.com' },
-        { id: 'tech-jessica', name: 'Jessica', email: 'jessica@example.com' }
+        { id: 'tech-kallie', name: 'Kallie (Owner)', email: 'kallierichardson16@gmail.com' }
     ];
 
-    if (!localStorage.getItem('technicians')) {
-        localStorage.setItem('technicians', JSON.stringify(defaultTechs));
+    // --- Technicians list migration ---
+    // Seed if missing, or clean up old Sarah/Jessica entries in existing browsers
+    let storedTechs = [];
+    try {
+        storedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+    } catch (e) {
+        storedTechs = [];
+    }
+
+    // Remove stale default entries no longer in the app
+    const staleEmails = ['sarah@example.com', 'jessica@example.com'];
+    let techsModified = false;
+    staleEmails.forEach(email => {
+        const idx = storedTechs.findIndex(t => t.email && t.email.toLowerCase() === email);
+        if (idx !== -1) { storedTechs.splice(idx, 1); techsModified = true; }
+    });
+
+    // Ensure Kallie exists in the technicians list
+    if (!storedTechs.some(t => t.email && t.email.toLowerCase() === 'kallierichardson16@gmail.com')) {
+        storedTechs.unshift(defaultTechs[0]);
+        techsModified = true;
+    }
+
+    if (techsModified || !localStorage.getItem('technicians')) {
+        localStorage.setItem('technicians', JSON.stringify(storedTechs));
     }
 
     // Default Blocked Dates
@@ -62,7 +84,7 @@ export const initializeData = () => {
         localStorage.setItem('blockedDates', JSON.stringify([]));
     }
 
-    // Initialize individual tech schedules based on legacy if possible
+    // Initialize individual tech schedules
     const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const DEFAULT_SCHEDULE = DAYS_OF_WEEK.map(day => ({
         day,
@@ -71,18 +93,14 @@ export const initializeData = () => {
         endTime: '17:00'
     }));
 
-    defaultTechs.forEach(tech => {
-        if (!localStorage.getItem(`schedule_${tech.id}`)) {
-            // Retroactively migrate `techSchedule` to `tech-sarah`
-            if (tech.id === 'tech-sarah' && localStorage.getItem('techSchedule')) {
-                localStorage.setItem(`schedule_${tech.id}`, localStorage.getItem('techSchedule'));
-            } else {
-                localStorage.setItem(`schedule_${tech.id}`, JSON.stringify(DEFAULT_SCHEDULE));
-            }
-        }
-    });
+    // Seed Kallie's schedule if missing
+    if (!localStorage.getItem('schedule_tech-kallie')) {
+        // Carry over a legacy schedule if one exists from old Sarah key
+        const legacy = localStorage.getItem('schedule_tech-sarah') || localStorage.getItem('techSchedule');
+        localStorage.setItem('schedule_tech-kallie', legacy || JSON.stringify(DEFAULT_SCHEDULE));
+    }
 
-    // Default Users (with pre-hashed 'admin123' passwords)
+    // Default Users — Kallie only as the seeded owner
     const defaultUsers = [
         {
             id: 'tech-kallie',
@@ -91,14 +109,6 @@ export const initializeData = () => {
             phone: '385-296-5737',
             passwordHash: 'ce8995efad4553f000a9e2620b2c8c140797679c018025143a820cf9dffffe07', // SHA-256 of owner password
             role: 'owner'
-        },
-        {
-            id: 'tech-jessica',
-            name: 'Jessica',
-            email: 'jessica@example.com',
-            phone: '555-0101',
-            passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // SHA-256 for admin123
-            role: 'tech'
         }
     ];
 
@@ -110,24 +120,25 @@ export const initializeData = () => {
     }
 
     let modified = false;
-    defaultUsers.forEach(defaultUser => {
-        const index = users.findIndex(u => u.email.toLowerCase() === defaultUser.email.toLowerCase());
-        if (index === -1) {
-            users.push(defaultUser);
-            modified = true;
-        } else {
-            // Fix incorrect legacy hash if present in browser storage
-            if (users[index].passwordHash === '2407515c1e300225c5890e0c036329c0b11568c74015f8e5ee9352e46f6e5200') {
-                users[index].passwordHash = defaultUser.passwordHash;
-                modified = true;
-            }
-            // Migrate legacy role for Sarah to 'owner'
-            if (defaultUser.email === 'sarah@example.com' && users[index].role !== 'owner') {
-                users[index].role = 'owner';
-                modified = true;
-            }
-        }
+
+    // Remove stale default accounts (Sarah, Jessica) from existing browsers
+    const staleUserEmails = ['sarah@example.com', 'jessica@example.com'];
+    staleUserEmails.forEach(email => {
+        const idx = users.findIndex(u => u.email.toLowerCase() === email);
+        if (idx !== -1) { users.splice(idx, 1); modified = true; }
     });
+
+    // Ensure Kallie exists with correct role
+    const kallieIndex = users.findIndex(u => u.email.toLowerCase() === 'kallierichardson16@gmail.com');
+    if (kallieIndex === -1) {
+        users.unshift(defaultUsers[0]);
+        modified = true;
+    } else {
+        if (users[kallieIndex].role !== 'owner') {
+            users[kallieIndex].role = 'owner';
+            modified = true;
+        }
+    }
 
     if (modified || !localStorage.getItem('nail_nook_users')) {
         localStorage.setItem('nail_nook_users', JSON.stringify(users));
