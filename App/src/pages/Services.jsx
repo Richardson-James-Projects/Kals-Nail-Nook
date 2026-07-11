@@ -1,13 +1,26 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 
 const Services = () => {
     const [services, setServices] = useState([]);
 
     useEffect(() => {
-        const storedServices = JSON.parse(localStorage.getItem('services') || '[]');
-        setServices(storedServices);
+        const fetchServices = async () => {
+            if (isSupabaseConfigured) {
+                try {
+                    const { data } = await supabase.from('services').select('*');
+                    setServices(data || []);
+                } catch (e) {
+                    console.error('Error fetching services from Supabase:', e);
+                }
+            } else {
+                const storedServices = JSON.parse(localStorage.getItem('services') || '[]');
+                setServices(storedServices);
+            }
+        };
+        fetchServices();
     }, []);
 
     return (

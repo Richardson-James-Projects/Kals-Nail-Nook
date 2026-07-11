@@ -1,4 +1,6 @@
-export const initializeData = () => {
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+
+export const initializeData = async () => {
     // Default Services
     const defaultServices = [
         {
@@ -142,6 +144,69 @@ export const initializeData = () => {
 
     if (modified || !localStorage.getItem('nail_nook_users')) {
         localStorage.setItem('nail_nook_users', JSON.stringify(users));
+    }
+
+    // --- SUPABASE DATABASE INITIAL SEEDING ---
+    if (isSupabaseConfigured) {
+        try {
+            // 1. Seed Users table
+            const { data: dbUsers, error: userError } = await supabase
+                .from('nail_nook_users')
+                .select('id')
+                .limit(1);
+
+            if (!userError && (!dbUsers || dbUsers.length === 0)) {
+                // Convert camelCase object keys to snake_case for Postgres
+                const dbUsersToInsert = defaultUsers.map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    email: u.email.toLowerCase(),
+                    phone: u.phone,
+                    password_hash: u.passwordHash,
+                    role: u.role
+                }));
+                await supabase.from('nail_nook_users').insert(dbUsersToInsert);
+            }
+
+            // 2. Seed Services table
+            const { data: dbServices, error: serviceError } = await supabase
+                .from('services')
+                .select('id')
+                .limit(1);
+
+            if (!serviceError && (!dbServices || dbServices.length === 0)) {
+                await supabase.from('services').insert(defaultServices);
+            }
+
+            // 3. Seed Technicians table
+            const { data: dbTechs, error: techError } = await supabase
+                .from('technicians')
+                .select('id')
+                .limit(1);
+
+            if (!techError && (!dbTechs || dbTechs.length === 0)) {
+                await supabase.from('technicians').insert(defaultTechs);
+            }
+
+            // 4. Seed Schedules table
+            const { data: dbSchedules, error: schedError } = await supabase
+                .from('schedules')
+                .select('id')
+                .limit(1);
+
+            if (!schedError && (!dbSchedules || dbSchedules.length === 0)) {
+                const dbSchedulesToInsert = DEFAULT_SCHEDULE.map(s => ({
+                    tech_id: 'tech-kallie',
+                    day: s.day,
+                    is_working: s.isWorking,
+                    start_time: s.startTime,
+                    end_time: s.endTime
+                }));
+                await supabase.from('schedules').insert(dbSchedulesToInsert);
+            }
+        } catch (e) {
+            console.error('Error seeding Supabase database:', e);
+        }
     }
 };
 

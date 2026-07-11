@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, Phone, Users, Lock, PenTool, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+
 const timeSlots = [
     '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
     '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
@@ -40,27 +42,95 @@ const Booking = () => {
             setFormData(prev => ({ ...prev, name: user.name || '', phone: user.phone || '' }));
         }
 
-        const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
-        setServices(loadedServices);
+        const loadData = async () => {
+            if (isSupabaseConfigured) {
+                try {
+                    // Fetch services
+                    const { data: dbServices } = await supabase.from('services').select('*');
+                    const loadedServices = dbServices || [];
+                    setServices(loadedServices);
+                    if (loadedServices.length > 0 && !formData.service) {
+                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                    }
 
-        if (loadedServices.length > 0 && !formData.service) { // Ensure initial service is set
-             setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
-        }
+                    // Fetch technicians
+                    const { data: dbTechs } = await supabase.from('technicians').select('*');
+                    const loadedTechs = dbTechs || [];
+                    setTechnicians(loadedTechs);
 
-        const loadedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
-        setTechnicians(loadedTechs);
+                    // Fetch schedules
+                    const { data: dbSchedules } = await supabase.from('schedules').select('*');
+                    const schedules = {};
+                    loadedTechs.forEach(t => {
+                        schedules[t.id] = [];
+                    });
+                    if (dbSchedules) {
+                        dbSchedules.forEach(s => {
+                            if (schedules[s.tech_id]) {
+                                schedules[s.tech_id].push({
+                                    day: s.day,
+                                    isWorking: s.is_working,
+                                    startTime: s.start_time,
+                                    endTime: s.end_time
+                                });
+                            }
+                        });
+                    }
+                    setTechSchedules(schedules);
 
-        const loadedBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
-        setBlockedDates(loadedBlocked);
+                    // Fetch existing bookings
+                    const { data: dbBookings } = await supabase
+                        .from('bookings')
+                        .select('*')
+                        .neq('status', 'Cancelled');
+                    
+                    const loadedBookings = (dbBookings || []).map(b => ({
+                        id: b.id,
+                        service: b.service,
+                        serviceName: b.service_name,
+                        techId: b.tech_id,
+                        techName: b.tech_name,
+                        date: b.date,
+                        time: b.time,
+                        name: b.name,
+                        phone: b.phone,
+                        email: b.email,
+                        status: b.status,
+                        notes: b.notes,
+                        pictures: b.pictures || [],
+                        createdAt: b.created_at,
+                        bookedBy: b.booked_by
+                    }));
+                    setExistingBookings(loadedBookings);
 
-        const schedules = {};
-        loadedTechs.forEach(t => {
-            schedules[t.id] = JSON.parse(localStorage.getItem(`schedule_${t.id}`) || '[]');
-        });
-        setTechSchedules(schedules);
+                } catch (e) {
+                    console.error('Error fetching data from Supabase:', e);
+                }
+            } else {
+                const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
+                setServices(loadedServices);
+                if (loadedServices.length > 0 && !formData.service) {
+                    setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                }
 
-        const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        setExistingBookings(bookings);
+                const loadedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                setTechnicians(loadedTechs);
+
+                const schedules = {};
+                loadedTechs.forEach(t => {
+                    schedules[t.id] = JSON.parse(localStorage.getItem(`schedule_${t.id}`) || '[]');
+                });
+                setTechSchedules(schedules);
+
+                const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                setExistingBookings(bookings);
+            }
+
+            const loadedBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
+            setBlockedDates(loadedBlocked);
+        };
+
+        loadData();
     }, [user, isBookingForSomeoneElse, searchParams]);
 
     const toggleBookingForSomeoneElse = () => {
@@ -199,10 +269,37 @@ const Booking = () => {
             pictures: designPictures
         };
 
-        const currentBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        localStorage.setItem('bookings', JSON.stringify([...currentBookings, booking]));
+        const saveBooking = async () => {
+            if (isSupabaseConfigured) {
+                const dbBooking = {
+                    id: booking.id,
+                    service: booking.service,
+                    service_name: booking.serviceName,
+                    tech_id: booking.techId,
+                    tech_name: booking.techName,
+                    date: booking.date,
+                    time: booking.time,
+                    name: booking.name,
+                    phone: booking.phone,
+                    email: booking.email,
+                    status: booking.status,
+                    notes: booking.notes,
+                    pictures: booking.pictures,
+                    created_at: booking.createdAt,
+                    booked_by: booking.bookedBy
+                };
+                const { error } = await supabase.from('bookings').insert([dbBooking]);
+                if (error) {
+                    console.error('Error inserting booking in Supabase:', error);
+                }
+            } else {
+                const currentBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                localStorage.setItem('bookings', JSON.stringify([...currentBookings, booking]));
+            }
+            navigate('/confirmation', { state: { booking } });
+        };
 
-        navigate('/confirmation', { state: { booking } });
+        saveBooking();
     };
 
     const handleChange = (e) => {

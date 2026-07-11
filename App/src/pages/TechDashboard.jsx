@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert } from 'lucide-react';
 import { hashPassword } from '../utils/crypto';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -57,46 +58,155 @@ const TechDashboard = () => {
         '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
     ];
 
-    useEffect(() => {
-        const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
-        // We find the matching tech by email, or fallback if testing locally
-        const currentTech = techs.find(t => t.email === user?.email) || techs[0];
-        setTechId(currentTech?.id);
+    const fetchDashboardData = async (currentTechId) => {
+        if (isSupabaseConfigured) {
+            try {
+                // Fetch technicians
+                const { data: dbTechs } = await supabase.from('technicians').select('*');
+                const loadedTechs = dbTechs || [];
+                setTechnicians(loadedTechs);
 
-        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        const myBookings = allBookings.filter(b => b.techId === currentTech?.id || b.techId === 'any');
-        myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
-        setAppointments(myBookings);
+                // Find matching tech by email
+                const matchingTech = loadedTechs.find(t => t.email === user?.email) || loadedTechs[0];
+                const activeTechId = currentTechId || matchingTech?.id;
+                setTechId(activeTechId);
 
-        const savedSchedule = JSON.parse(localStorage.getItem(`schedule_${currentTech?.id}`));
-        if (savedSchedule) setSchedule(savedSchedule);
+                // Fetch bookings
+                const { data: dbBookings } = await supabase.from('bookings').select('*');
+                const loadedBookings = (dbBookings || []).map(b => ({
+                    id: b.id,
+                    service: b.service,
+                    serviceName: b.service_name,
+                    techId: b.tech_id,
+                    techName: b.tech_name,
+                    date: b.date,
+                    time: b.time,
+                    name: b.name,
+                    phone: b.phone,
+                    email: b.email,
+                    status: b.status,
+                    notes: b.notes,
+                    pictures: b.pictures || [],
+                    createdAt: b.created_at,
+                    bookedBy: b.booked_by
+                }));
+                const filteredBookings = loadedBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+                filteredBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+                setAppointments(filteredBookings);
+
+                // Fetch schedules
+                if (activeTechId) {
+                    const { data: dbSchedules } = await supabase
+                        .from('schedules')
+                        .select('*')
+                        .eq('tech_id', activeTechId);
+                    
+                    if (dbSchedules && dbSchedules.length > 0) {
+                        // Map db rows back to schedule format sorted by day of week index
+                        const daysIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const mappedSchedule = dbSchedules.map(s => ({
+                            day: s.day,
+                            isWorking: s.is_working,
+                            startTime: s.start_time,
+                            endTime: s.end_time
+                        })).sort((a, b) => daysIndex.indexOf(a.day) - daysIndex.indexOf(b.day));
+                        setSchedule(mappedSchedule);
+                    } else {
+                        setSchedule(DEFAULT_SCHEDULE);
+                    }
+                }
+
+                // Fetch services
+                const { data: dbServices } = await supabase.from('services').select('*');
+                setServices(dbServices || []);
+
+                // Fetch users
+                const { data: dbUsers } = await supabase.from('nail_nook_users').select('*');
+                const loadedUsers = (dbUsers || []).map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    email: u.email,
+                    phone: u.phone,
+                    role: u.role,
+                    requiresPasswordReset: u.requires_password_reset
+                }));
+                setUsersList(loadedUsers);
+
+            } catch (e) {
+                console.error('Error fetching dashboard data from Supabase:', e);
+            }
+        } else {
+            const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
+            const matchingTech = techs.find(t => t.email === user?.email) || techs[0];
+            const activeTechId = currentTechId || matchingTech?.id;
+            setTechId(activeTechId);
+
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const myBookings = allBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+            myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+            setAppointments(myBookings);
+
+            const savedSchedule = JSON.parse(localStorage.getItem(`schedule_${activeTechId}`));
+            if (savedSchedule) setSchedule(savedSchedule);
+
+            const lServices = JSON.parse(localStorage.getItem('services') || '[]');
+            setServices(lServices);
+
+            const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+            setUsersList(allUsers);
+            setTechnicians(techs);
+        }
 
         const lBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
         setBlockedDates(lBlocked);
+    };
 
-        const lServices = JSON.parse(localStorage.getItem('services') || '[]');
-        setServices(lServices);
-
-        const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
-        setUsersList(allUsers);
-
-        setTechnicians(techs);
+    useEffect(() => {
+        fetchDashboardData();
     }, [user]);
 
     // --- APPOINTMENT ACTIONS ---
-    const handleStatusChange = (apptId, status) => {
-        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        const updated = allBookings.map(b => b.id === apptId ? { ...b, status } : b);
-        localStorage.setItem('bookings', JSON.stringify(updated));
-        
-        const myBookings = updated.filter(b => b.techId === techId || b.techId === 'any');
-        myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
-        setAppointments(myBookings);
+    const handleStatusChange = async (apptId, status) => {
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ status })
+                    .eq('id', apptId);
+                if (error) console.error('Error updating status in Supabase:', error);
+            } catch (e) {
+                console.error('Error saving status:', e);
+            }
+            await fetchDashboardData(techId);
+        } else {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const updated = allBookings.map(b => b.id === apptId ? { ...b, status } : b);
+            localStorage.setItem('bookings', JSON.stringify(updated));
+            
+            const myBookings = updated.filter(b => b.techId === techId || b.techId === 'any');
+            myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+            setAppointments(myBookings);
+        }
     };
 
     // --- CLIENT NOTES ACTIONS ---
-    const viewClientNotes = (appt) => {
-        const internalText = localStorage.getItem(`tech_notes_${appt.email}`) || '';
+    const viewClientNotes = async (appt) => {
+        let internalText = '';
+        if (isSupabaseConfigured) {
+            try {
+                const { data } = await supabase
+                    .from('tech_notes')
+                    .select('note_text')
+                    .eq('email', appt.email)
+                    .maybeSingle();
+                internalText = data ? data.note_text : '';
+            } catch (e) {
+                console.error('Error reading internal notes:', e);
+            }
+        } else {
+            internalText = localStorage.getItem(`tech_notes_${appt.email}`) || '';
+        }
+
         setSelectedClientNote({
             apptId: appt.id,
             name: appt.name,
@@ -107,14 +217,40 @@ const TechDashboard = () => {
         });
     };
 
-    const saveInternalNote = () => {
-        localStorage.setItem(`tech_notes_${selectedClientNote.email}`, selectedClientNote.internalText);
+    const saveInternalNote = async () => {
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('tech_notes')
+                    .upsert({ email: selectedClientNote.email, note_text: selectedClientNote.internalText });
+                if (error) console.error('Error upserting internal notes in Supabase:', error);
+            } catch (e) {
+                console.error('Error saving internal notes:', e);
+            }
+        } else {
+            localStorage.setItem(`tech_notes_${selectedClientNote.email}`, selectedClientNote.internalText);
+        }
         setSelectedClientNote(null);
     };
 
     // Opens private tech notes for a user without appointment context
-    const openUserNotes = (u) => {
-        const internalText = localStorage.getItem(`tech_notes_${u.email}`) || '';
+    const openUserNotes = async (u) => {
+        let internalText = '';
+        if (isSupabaseConfigured) {
+            try {
+                const { data } = await supabase
+                    .from('tech_notes')
+                    .select('note_text')
+                    .eq('email', u.email)
+                    .maybeSingle();
+                internalText = data ? data.note_text : '';
+            } catch (e) {
+                console.error('Error reading internal notes:', e);
+            }
+        } else {
+            internalText = localStorage.getItem(`tech_notes_${u.email}`) || '';
+        }
+
         setSelectedClientNote({
             name: u.name,
             email: u.email,
@@ -131,9 +267,28 @@ const TechDashboard = () => {
         setSchedule(newSchedule);
     };
 
-    const saveSchedule = () => {
+    const saveSchedule = async () => {
         setIsSavingSchedule(true);
-        localStorage.setItem(`schedule_${techId}`, JSON.stringify(schedule));
+        if (isSupabaseConfigured) {
+            try {
+                for (const s of schedule) {
+                    await supabase
+                        .from('schedules')
+                        .upsert({
+                            tech_id: techId,
+                            day: s.day,
+                            is_working: s.isWorking,
+                            start_time: s.startTime,
+                            end_time: s.endTime
+                        }, { onConflict: 'tech_id,day' });
+                }
+            } catch (e) {
+                console.error('Error saving schedule in Supabase:', e);
+            }
+        } else {
+            localStorage.setItem(`schedule_${techId}`, JSON.stringify(schedule));
+        }
+
         setTimeout(() => {
             setIsSavingSchedule(false);
             setScheduleMessage('Schedule saved successfully!');
@@ -157,7 +312,7 @@ const TechDashboard = () => {
     };
 
     // --- SERVICES ACTIONS ---
-    const handleSaveService = (e) => {
+    const handleSaveService = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
         
@@ -170,27 +325,51 @@ const TechDashboard = () => {
             popular: fd.get('popular') === 'on'
         };
 
-        let updated;
-        if (editingService.id) {
-             updated = services.map(s => s.id === newServiceObj.id ? newServiceObj : s);
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('services')
+                    .upsert([newServiceObj]);
+                if (error) console.error('Error upserting service in Supabase:', error);
+            } catch (e) {
+                console.error('Error saving service:', e);
+            }
+            await fetchDashboardData(techId);
         } else {
-             updated = [...services, newServiceObj];
-        }
-        
-        setServices(updated);
-        localStorage.setItem('services', JSON.stringify(updated));
-        setEditingService(null);
-    };
-
-    const handleDeleteService = (id) => {
-        if (window.confirm('Are you sure you want to delete this service?')) {
-            const updated = services.filter(s => s.id !== id);
+            let updated;
+            if (editingService.id) {
+                 updated = services.map(s => s.id === newServiceObj.id ? newServiceObj : s);
+            } else {
+                 updated = [...services, newServiceObj];
+            }
             setServices(updated);
             localStorage.setItem('services', JSON.stringify(updated));
         }
+        setEditingService(null);
     };
 
-    const handleDeleteUser = (userId) => {
+    const handleDeleteService = async (id) => {
+        if (window.confirm('Are you sure you want to delete this service?')) {
+            if (isSupabaseConfigured) {
+                try {
+                    const { error } = await supabase
+                        .from('services')
+                        .delete()
+                        .eq('id', id);
+                    if (error) console.error('Error deleting service in Supabase:', error);
+                } catch (e) {
+                    console.error('Error deleting service:', e);
+                }
+                await fetchDashboardData(techId);
+            } else {
+                const updated = services.filter(s => s.id !== id);
+                setServices(updated);
+                localStorage.setItem('services', JSON.stringify(updated));
+            }
+        }
+    };
+
+    const handleDeleteUser = async (userId) => {
         const targetUser = usersList.find(u => u.id === userId);
         if (!targetUser) return;
         
@@ -210,15 +389,39 @@ const TechDashboard = () => {
         }
 
         if (window.confirm(`Are you sure you want to delete the account for ${targetUser.name} (${targetUser.email})? This action cannot be undone.`)) {
-            const updatedUsers = usersList.filter(u => u.id !== userId);
-            setUsersList(updatedUsers);
-            localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
+            if (isSupabaseConfigured) {
+                try {
+                    // Delete from users table
+                    const { error: userError } = await supabase
+                        .from('nail_nook_users')
+                        .delete()
+                        .eq('id', userId);
 
-            // Also keep technicians selection list in sync for booking
-            if (targetUser.role === 'tech') {
-                const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
-                const updatedTechs = currentTechs.filter(t => t.email.toLowerCase() !== targetUser.email.toLowerCase());
-                localStorage.setItem('technicians', JSON.stringify(updatedTechs));
+                    if (userError) console.error('Error deleting user in Supabase:', userError);
+
+                    // If they are a tech, delete from technicians table
+                    if (targetUser.role === 'tech') {
+                        const { error: techError } = await supabase
+                            .from('technicians')
+                            .delete()
+                            .eq('email', targetUser.email);
+                        if (techError) console.error('Error deleting tech in Supabase:', techError);
+                    }
+                } catch (e) {
+                    console.error('Error deleting user:', e);
+                }
+                await fetchDashboardData(techId);
+            } else {
+                const updatedUsers = usersList.filter(u => u.id !== userId);
+                setUsersList(updatedUsers);
+                localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
+
+                // Also keep technicians selection list in sync for booking
+                if (targetUser.role === 'tech') {
+                    const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                    const updatedTechs = currentTechs.filter(t => t.email.toLowerCase() !== targetUser.email.toLowerCase());
+                    localStorage.setItem('technicians', JSON.stringify(updatedTechs));
+                }
             }
         }
     };
@@ -244,26 +447,57 @@ const TechDashboard = () => {
             const newUser = {
                 id: role === 'tech' ? `tech-${Date.now()}` : `user-${Date.now()}`,
                 name,
-                email,
+                email: email.toLowerCase(),
                 phone,
                 passwordHash,
                 role,
                 requiresPasswordReset: true
             };
 
-            const updatedUsers = [...usersList, newUser];
-            setUsersList(updatedUsers);
-            localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
-
-            // If new user is a tech, sync with booking technicians list
-            if (role === 'tech') {
-                const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
-                currentTechs.push({
+            if (isSupabaseConfigured) {
+                // Map fields to snake_case for Supabase
+                const dbUser = {
                     id: newUser.id,
                     name: newUser.name,
-                    email: newUser.email
-                });
-                localStorage.setItem('technicians', JSON.stringify(currentTechs));
+                    email: newUser.email,
+                    phone: newUser.phone,
+                    password_hash: newUser.passwordHash,
+                    role: newUser.role,
+                    requires_password_reset: newUser.requiresPasswordReset
+                };
+
+                const { error: userError } = await supabase.from('nail_nook_users').insert([dbUser]);
+                if (userError) {
+                    setAddUserError('Failed to create account in database.');
+                    return;
+                }
+
+                if (role === 'tech') {
+                    const { error: techError } = await supabase.from('technicians').insert([{
+                        id: newUser.id,
+                        name: newUser.name,
+                        email: newUser.email
+                    }]);
+                    if (techError) {
+                        console.error('Error inserting technician in Supabase:', techError);
+                    }
+                }
+                await fetchDashboardData(techId);
+            } else {
+                const updatedUsers = [...usersList, newUser];
+                setUsersList(updatedUsers);
+                localStorage.setItem('nail_nook_users', JSON.stringify(updatedUsers));
+
+                // If new user is a tech, sync with booking technicians list
+                if (role === 'tech') {
+                    const currentTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                    currentTechs.push({
+                        id: newUser.id,
+                        name: newUser.name,
+                        email: newUser.email
+                    });
+                    localStorage.setItem('technicians', JSON.stringify(currentTechs));
+                }
             }
 
             setIsAddingUser(false);
@@ -288,7 +522,7 @@ const TechDashboard = () => {
         setIsBookingAppt(true);
     };
 
-    const handleCreateBookingSubmit = (e) => {
+    const handleCreateBookingSubmit = async (e) => {
         e.preventDefault();
         setBookingError('');
 
@@ -341,14 +575,40 @@ const TechDashboard = () => {
             status: 'Confirmed'
         };
 
-        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        const updatedBookings = [...allBookings, newBooking];
-        localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+        if (isSupabaseConfigured) {
+            try {
+                // Map snake_case columns
+                const dbBooking = {
+                    id: newBooking.id,
+                    service: newBooking.service,
+                    service_name: newBooking.serviceName,
+                    tech_id: newBooking.techId,
+                    tech_name: newBooking.techName,
+                    date: newBooking.date,
+                    time: newBooking.time,
+                    name: newBooking.name,
+                    phone: newBooking.phone,
+                    email: newBooking.email,
+                    status: newBooking.status,
+                    created_at: newBooking.createdAt,
+                    booked_by: newBooking.bookedBy
+                };
+                const { error } = await supabase.from('bookings').insert([dbBooking]);
+                if (error) console.error('Error creating booking in Supabase:', error);
+            } catch (e) {
+                console.error('Error creating booking:', e);
+            }
+            await fetchDashboardData(techId);
+        } else {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const updatedBookings = [...allBookings, newBooking];
+            localStorage.setItem('bookings', JSON.stringify(updatedBookings));
 
-        // Refresh lists
-        const myBookings = updatedBookings.filter(b => b.techId === techId || b.techId === 'any');
-        myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
-        setAppointments(myBookings);
+            // Refresh lists
+            const myBookings = updatedBookings.filter(b => b.techId === techId || b.techId === 'any');
+            myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+            setAppointments(myBookings);
+        }
 
         setIsBookingAppt(false);
     };

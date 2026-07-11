@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, PenTool, Save, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 
 const CustomerDashboard = () => {
     const { user } = useAuth();
@@ -13,10 +14,44 @@ const CustomerDashboard = () => {
     const [tempPictures, setTempPictures] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
 
+    const fetchAppointments = async () => {
+        if (isSupabaseConfigured) {
+            try {
+                const { data: dbBookings } = await supabase
+                    .from('bookings')
+                    .select('*')
+                    .or(`name.eq."${user.name}",email.eq."${user.email}"`);
+
+                const loadedBookings = (dbBookings || []).map(b => ({
+                    id: b.id,
+                    service: b.service,
+                    serviceName: b.service_name,
+                    techId: b.tech_id,
+                    techName: b.tech_name,
+                    date: b.date,
+                    time: b.time,
+                    name: b.name,
+                    phone: b.phone,
+                    email: b.email,
+                    status: b.status,
+                    notes: b.notes,
+                    pictures: b.pictures || [],
+                    createdAt: b.created_at,
+                    bookedBy: b.booked_by
+                }));
+                setAppointments(loadedBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            } catch (e) {
+                console.error('Error fetching appointments from Supabase:', e);
+            }
+        } else {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const myBookings = allBookings.filter(b => b.name === user.name || b.email === user.email);
+            setAppointments(myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+        }
+    };
+
     useEffect(() => {
-        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        const myBookings = allBookings.filter(b => b.name === user.name || b.email === user.email);
-        setAppointments(myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+        fetchAppointments();
     }, [user]);
 
     const compressImage = (file) => {
@@ -68,31 +103,74 @@ const CustomerDashboard = () => {
         e.target.value = '';
     };
 
-    const handleSaveApptNotes = () => {
-        const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        const updated = allBookings.map(b => b.id === editingAppt.id ? { ...b, notes: tempNotes, pictures: tempPictures } : b);
-        localStorage.setItem('bookings', JSON.stringify(updated));
-
-        setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+    const handleSaveApptNotes = async () => {
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ notes: tempNotes, pictures: tempPictures })
+                    .eq('id', editingAppt.id);
+                if (error) {
+                    console.error('Error updating notes in Supabase:', error);
+                }
+            } catch (e) {
+                console.error('Error saving notes:', e);
+            }
+            await fetchAppointments();
+        } else {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const updated = allBookings.map(b => b.id === editingAppt.id ? { ...b, notes: tempNotes, pictures: tempPictures } : b);
+            localStorage.setItem('bookings', JSON.stringify(updated));
+            setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+        }
         setEditingAppt(null);
     };
 
-    const handleDeleteApptNotes = (apptId) => {
+    const handleDeleteApptNotes = async (apptId) => {
         if (window.confirm('Are you sure you want to delete the notes and photos for this appointment?')) {
-            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-            const updated = allBookings.map(b => b.id === apptId ? { ...b, notes: '', pictures: [] } : b);
-            localStorage.setItem('bookings', JSON.stringify(updated));
-
-            setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            if (isSupabaseConfigured) {
+                try {
+                    const { error } = await supabase
+                        .from('bookings')
+                        .update({ notes: '', pictures: [] })
+                        .eq('id', apptId);
+                    if (error) {
+                        console.error('Error deleting notes in Supabase:', error);
+                    }
+                } catch (e) {
+                    console.error('Error deleting notes:', e);
+                }
+                await fetchAppointments();
+            } else {
+                const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                const updated = allBookings.map(b => b.id === apptId ? { ...b, notes: '', pictures: [] } : b);
+                localStorage.setItem('bookings', JSON.stringify(updated));
+                setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            }
         }
     };
 
-    const handleCancel = (id) => {
+    const handleCancel = async (id) => {
         if(window.confirm('Are you sure you want to cancel this appointment?')){
-             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-             const updated = allBookings.map(b => b.id === id ? { ...b, status: 'Cancelled'} : b);
-             localStorage.setItem('bookings', JSON.stringify(updated));
-             setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            if (isSupabaseConfigured) {
+                try {
+                    const { error } = await supabase
+                        .from('bookings')
+                        .update({ status: 'Cancelled' })
+                        .eq('id', id);
+                    if (error) {
+                        console.error('Error cancelling appointment in Supabase:', error);
+                    }
+                } catch (e) {
+                    console.error('Error cancelling appointment:', e);
+                }
+                await fetchAppointments();
+            } else {
+                 const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                 const updated = allBookings.map(b => b.id === id ? { ...b, status: 'Cancelled'} : b);
+                 localStorage.setItem('bookings', JSON.stringify(updated));
+                 setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            }
         }
     };
 
