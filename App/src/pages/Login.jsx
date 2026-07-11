@@ -278,7 +278,7 @@ const Login = () => {
                                 placeholder="••••••••"
                             />
                         </div>
-                        {isTech && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>Use password: admin123</p>}
+
                     </div>
 
                     <button

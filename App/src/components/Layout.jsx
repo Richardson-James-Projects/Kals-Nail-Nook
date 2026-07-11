@@ -75,7 +75,7 @@ const Layout = () => {
                         {user ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: '1rem' }}>
                                 <Link
-                                    to={user.role === 'tech' ? '/tech-dashboard' : '/dashboard'}
+                                    to={user.role === 'tech' || user.role === 'owner' ? '/tech-dashboard' : '/dashboard'}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -167,7 +167,7 @@ const Layout = () => {
                         {user ? (
                             <>
                                 <Link
-                                    to={user.role === 'tech' ? '/tech-dashboard' : '/dashboard'}
+                                    to={user.role === 'tech' || user.role === 'owner' ? '/tech-dashboard' : '/dashboard'}
                                     onClick={() => setIsMenuOpen(false)}
                                     style={{
                                         padding: '0.5rem 0',
