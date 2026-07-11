@@ -985,7 +985,7 @@ const TechDashboard = () => {
                                         opacity: appt.status === 'Cancelled' ? 0.6 : 1
                                     }}>
                                         <div>
-                                            <div style={{ fontWeight: '500' }}>{new Date(appt.date).toLocaleDateString()}</div>
+                                            <div style={{ fontWeight: '500' }}>{new Date(appt.date + 'T00:00:00').toLocaleDateString()}</div>
                                             <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>{appt.time}</div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2039,16 +2039,20 @@ const TechDashboard = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
-                                    <select 
+                                    <input 
+                                        type="text"
+                                        list="techTimeSlots"
                                         value={bookingFormData.time} 
                                         onChange={(e) => setBookingFormData({...bookingFormData, time: e.target.value})} 
                                         required 
-                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
-                                    >
+                                        placeholder="e.g. 10:00 AM"
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
+                                    />
+                                    <datalist id="techTimeSlots">
                                         {TIME_SLOTS.map(t => (
-                                            <option key={t} value={t}>{t}</option>
+                                            <option key={t} value={t} />
                                         ))}
-                                    </select>
+                                    </datalist>
                                 </div>
                             </div>
                         </div>

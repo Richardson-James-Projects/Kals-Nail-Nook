@@ -280,7 +280,7 @@ const CustomerDashboard = () => {
                                                             )}
                                                         </div>
                                                         <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>
-                                                            {new Date(appt.date).toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                            {new Date(appt.date + 'T00:00:00').toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -363,7 +363,7 @@ const CustomerDashboard = () => {
                                                         </span>
                                                     </div>
                                                     <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: (appt.notes || (appt.pictures && appt.pictures.length > 0)) ? '1rem' : '0' }}>
-                                                        {new Date(appt.date).toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                        {new Date(appt.date + 'T00:00:00').toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
                                                     </div>
 
                                                     {(appt.notes || (appt.pictures && appt.pictures.length > 0)) && (
@@ -415,7 +415,7 @@ const CustomerDashboard = () => {
 
                         <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-primary)' }}>Appointment Design Details</h3>
                         <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1.5rem' }}>
-                            {editingAppt.serviceName} — {new Date(editingAppt.date).toLocaleDateString()}
+                            {editingAppt.serviceName} — {new Date(editingAppt.date + 'T00:00:00').toLocaleDateString()}
                         </p>
 
                         <div style={{ display: 'grid', gap: '1.25rem', marginBottom: '1.5rem' }}>

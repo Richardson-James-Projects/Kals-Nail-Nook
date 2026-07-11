@@ -71,7 +71,7 @@ const Confirmation = () => {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
-                            <div>{new Date(booking.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            <div>{new Date(booking.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
