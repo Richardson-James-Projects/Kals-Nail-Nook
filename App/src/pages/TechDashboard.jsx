@@ -40,6 +40,7 @@ const TechDashboard = () => {
     const [blockedDates, setBlockedDates] = useState([]);
     const [services, setServices] = useState([]);
     const [newBlockedDate, setNewBlockedDate] = useState('');
+    const [allBookingsList, setAllBookingsList] = useState([]);
 
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const [scheduleMessage, setScheduleMessage] = useState('');
@@ -104,9 +105,12 @@ const TechDashboard = () => {
                     notes: b.notes,
                     pictures: b.pictures || [],
                     createdAt: b.created_at,
-                    bookedBy: b.booked_by
+                    bookedBy: b.booked_by,
+                    techDismissed: b.tech_dismissed || false
                 }));
-                const filteredBookings = loadedBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+                setAllBookingsList(loadedBookings);
+
+                const filteredBookings = loadedBookings.filter(b => (b.techId === activeTechId || b.techId === 'any') && !b.techDismissed);
                 filteredBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
                 setAppointments(filteredBookings);
 
@@ -165,7 +169,12 @@ const TechDashboard = () => {
                 setTechId(activeTechId);
 
                 const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-                const myBookings = allBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+                const mappedBookings = allBookings.map(b => ({
+                    ...b,
+                    techDismissed: b.techDismissed || false
+                }));
+                setAllBookingsList(mappedBookings);
+                const myBookings = mappedBookings.filter(b => (b.techId === activeTechId || b.techId === 'any') && !b.techDismissed);
                 myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
                 setAppointments(myBookings);
 
@@ -190,7 +199,12 @@ const TechDashboard = () => {
             setTechId(activeTechId);
 
             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-            const myBookings = allBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+            const mappedBookings = allBookings.map(b => ({
+                ...b,
+                techDismissed: b.techDismissed || false
+            }));
+            setAllBookingsList(mappedBookings);
+            const myBookings = mappedBookings.filter(b => (b.techId === activeTechId || b.techId === 'any') && !b.techDismissed);
             myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
             setAppointments(myBookings);
 
@@ -232,7 +246,36 @@ const TechDashboard = () => {
             const updated = allBookings.map(b => b.id === apptId ? { ...b, status } : b);
             localStorage.setItem('bookings', JSON.stringify(updated));
             
-            const myBookings = updated.filter(b => b.techId === techId || b.techId === 'any');
+            const myBookings = updated.filter(b => (b.techId === techId || b.techId === 'any') && !b.techDismissed);
+            myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+            setAppointments(myBookings);
+        }
+    };
+
+    const handleDismissBooking = async (apptId) => {
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ tech_dismissed: true })
+                    .eq('id', apptId);
+                if (error) console.error('Error dismissing booking in Supabase:', error);
+            } catch (e) {
+                console.error('Error dismissing booking:', e);
+            }
+            await fetchDashboardData(techId);
+        } else {
+            const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+            const updated = allBookings.map(b => b.id === apptId ? { ...b, techDismissed: true } : b);
+            localStorage.setItem('bookings', JSON.stringify(updated));
+            
+            const mappedBookings = updated.map(b => ({
+                ...b,
+                techDismissed: b.techDismissed || false
+            }));
+            setAllBookingsList(mappedBookings);
+            
+            const myBookings = mappedBookings.filter(b => (b.techId === techId || b.techId === 'any') && !b.techDismissed);
             myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
             setAppointments(myBookings);
         }
@@ -761,13 +804,18 @@ const TechDashboard = () => {
             clientEmail = guestEmail || null;
         }
 
-        const techObj = technicians.find(t => t.id === bookingTechId);
+        let assignedTechId = bookingTechId;
+        if (assignedTechId === 'any') {
+            assignedTechId = techId || technicians[0]?.id || '';
+        }
+
+        const techObj = technicians.find(t => t.id === assignedTechId);
         const serviceObj = services.find(s => s.id === service);
 
         const newBooking = {
             id: Date.now().toString(),
             service,
-            techId: bookingTechId,
+            techId: assignedTechId,
             date,
             time,
             name: clientName,
@@ -820,8 +868,21 @@ const TechDashboard = () => {
             myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
             setAppointments(myBookings);
         }
-
         setIsBookingAppt(false);
+    };
+
+    const getNoShowCount = (u) => {
+        return allBookingsList.filter(b => 
+            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) || 
+            (b.phone && u.phone && cleanPhoneNumber(b.phone) === cleanPhoneNumber(u.phone))
+        ).filter(b => b.status === 'No-Show').length;
+    };
+
+    const getCancelledCount = (u) => {
+        return allBookingsList.filter(b => 
+            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) || 
+            (b.phone && u.phone && cleanPhoneNumber(b.phone) === cleanPhoneNumber(u.phone))
+        ).filter(b => b.status === 'Cancelled').length;
     };
 
     return (
@@ -934,7 +995,7 @@ const TechDashboard = () => {
                                             </select>
                                         </div>
 
-                                        <div style={{ textAlign: 'right' }}>
+                                        <div style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                             <button
                                                 onClick={() => viewClientNotes(appt)}
                                                 style={{
@@ -945,11 +1006,32 @@ const TechDashboard = () => {
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     gap: '0.3rem',
-                                                    color: '#333'
+                                                    color: '#333',
+                                                    border: 'none',
+                                                    cursor: 'pointer'
                                                 }}
                                             >
                                                 <FileText size={14} /> Notes
                                             </button>
+                                            {['Completed', 'Cancelled', 'No-Show'].includes(appt.status) && (
+                                                <button
+                                                    onClick={() => handleDismissBooking(appt.id)}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: '0.4rem',
+                                                        backgroundColor: '#fee2e2',
+                                                        color: '#ef4444',
+                                                        borderRadius: '4px',
+                                                        border: 'none',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    title="Dismiss from Schedule"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -1228,6 +1310,8 @@ const TechDashboard = () => {
                                         <th style={{ padding: '1rem' }}>Email</th>
                                         <th style={{ padding: '1rem' }}>Phone</th>
                                         <th style={{ padding: '1rem' }}>Role</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>No Shows</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Cancelled</th>
                                         <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
                                     </tr>
                                 </thead>
@@ -1260,6 +1344,12 @@ const TechDashboard = () => {
                                                     }}>
                                                         {u.role}
                                                     </span>
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: u.role === 'customer' && getNoShowCount(u) > 0 ? '#dc2626' : '#555' }}>
+                                                    {u.role === 'customer' ? getNoShowCount(u) : '-'}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: u.role === 'customer' && getCancelledCount(u) > 0 ? '#b91c1c' : '#555' }}>
+                                                    {u.role === 'customer' ? getCancelledCount(u) : '-'}
                                                 </td>
                                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem' }}>
