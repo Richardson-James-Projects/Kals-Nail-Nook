@@ -205,21 +205,6 @@ const Services = () => {
                                 ))}
                             </div>
                         )}
-
-                        <Link
-                            to={`/book`}
-                            style={{
-                                textAlign: 'center',
-                                backgroundColor: 'var(--color-secondary)',
-                                color: 'var(--color-white)',
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s',
-                            }}
-                        >
-                            Book Appointment
-                        </Link>
                     </div>
                 ))}
             </div>
