@@ -89,7 +89,7 @@ export const initializeData = () => {
             name: 'Kallie (Owner)',
             email: 'kallierichardson16@gmail.com',
             phone: '385-296-5737',
-            passwordHash: 'ce8995efad4553f000a9e2620b2c8c140797679c018025143a820cf9dffffe07', // SHA-256 for admin123
+            passwordHash: 'ce8995efad4553f000a9e2620b2c8c140797679c018025143a820cf9dffffe07', // SHA-256 of owner password
             role: 'owner'
         },
         {
