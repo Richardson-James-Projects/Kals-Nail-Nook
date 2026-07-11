@@ -159,6 +159,21 @@ const Services = () => {
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
+                        {service.popular && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-12px',
+                                right: '20px',
+                                backgroundColor: 'var(--color-primary)',
+                                color: 'var(--color-secondary)',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '20px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                            }}>
+                                MOST POPULAR
+                            </span>
+                        )}
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
