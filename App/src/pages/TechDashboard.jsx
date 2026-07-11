@@ -895,7 +895,7 @@ const TechDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                 
                 {/* 1. Appointment List */}
-                <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
                     <section>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
                             <h2 style={{ fontSize: '1.25rem', margin: 0 }}>
@@ -1041,7 +1041,7 @@ const TechDashboard = () => {
                 </div>
 
                 {/* 2. Availability & Blocked Dates Settings */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', minWidth: 0 }}>
                     <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                         {/* Weekly Schedule Array */}
                         <section style={{
@@ -1091,7 +1091,8 @@ const TechDashboard = () => {
                                         backgroundColor: daySchedule.isWorking ? '#fff' : '#f9f9f9',
                                         borderRadius: '8px',
                                         border: '1px solid #eee',
-                                        opacity: daySchedule.isWorking ? 1 : 0.6
+                                        opacity: daySchedule.isWorking ? 1 : 0.6,
+                                        flexWrap: 'wrap'
                                     }}>
                                         <div style={{ width: '100px', fontWeight: '500' }}>{daySchedule.day}</div>
 
@@ -1105,7 +1106,7 @@ const TechDashboard = () => {
                                         </label>
 
                                         {daySchedule.isWorking && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
                                                 <input
                                                     type="time"
                                                     value={daySchedule.startTime}
@@ -1167,7 +1168,7 @@ const TechDashboard = () => {
                 </div>
 
                 {/* 3. Service & Menu Management */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', minWidth: 0 }}>
                     <section style={{
                         backgroundColor: 'var(--color-white)',
                         borderRadius: '12px',
@@ -1237,7 +1238,7 @@ const TechDashboard = () => {
                 </div>
 
                 {/* 4. User Accounts Management */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', minWidth: 0 }}>
                     <section style={{
                         backgroundColor: 'var(--color-white)',
                         borderRadius: '12px',
@@ -1549,8 +1550,8 @@ const TechDashboard = () => {
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service Name</label>
                                 <input type="text" name="name" defaultValue={editingService.name} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
                             </div>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Price</label>
                                     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
                                         <span style={{ padding: '0 0.5rem 0 0.75rem', backgroundColor: '#f5f5f5', borderRight: '1px solid #ddd', fontWeight: '600', color: '#555', userSelect: 'none', height: '100%', display: 'flex', alignItems: 'center' }}>$</span>
@@ -1565,7 +1566,7 @@ const TechDashboard = () => {
                                         />
                                     </div>
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Duration</label>
                                     {(() => {
                                         const dur = editingService.duration || '';
@@ -1809,8 +1810,8 @@ const TechDashboard = () => {
                                             style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
                                         />
                                     </div>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                                        <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone</label>
                                             <input 
                                                 type="tel" 
@@ -1820,7 +1821,7 @@ const TechDashboard = () => {
                                                 style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
                                             />
                                         </div>
-                                        <div style={{ flex: 1 }}>
+                                        <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Email</label>
                                             <input 
                                                 type="email" 
@@ -1851,7 +1852,7 @@ const TechDashboard = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Technician</label>
                                     <select 
                                         value={bookingFormData.techId} 
@@ -1867,8 +1868,8 @@ const TechDashboard = () => {
                             </div>
 
                             {/* Date and Time */}
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Date</label>
                                     <input 
                                         type="date" 
@@ -1878,7 +1879,7 @@ const TechDashboard = () => {
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
                                     />
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
                                     <select 
                                         value={bookingFormData.time} 
