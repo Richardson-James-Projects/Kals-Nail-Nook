@@ -21,7 +21,7 @@ const Home = () => {
             <section style={{
                 backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url('/gallery/IMG_9829_edited.jpg')`,
                 backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundPosition: 'right top',
                 color: 'var(--color-white)',
                 padding: '7rem 0 6rem 0',
                 position: 'relative',
