@@ -92,9 +92,9 @@ const TechDashboard = () => {
                 const loadedBookings = (dbBookings || []).map(b => ({
                     id: b.id,
                     service: b.service,
-                    service_name: b.service_name,
-                    tech_id: b.tech_id,
-                    tech_name: b.tech_name,
+                    serviceName: b.service_name,
+                    techId: b.tech_id,
+                    techName: b.tech_name,
                     date: b.date,
                     time: b.time,
                     name: b.name,
