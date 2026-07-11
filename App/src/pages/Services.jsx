@@ -41,12 +41,15 @@ const Services = () => {
                 </p>
             </div>
 
+            {/* Main Services Grid */}
+            <h2 style={{ fontSize: '1.75rem', color: 'var(--color-secondary)', marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Nail Treatments Menu</h2>
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '2rem'
+                gap: '2rem',
+                marginBottom: '4rem'
             }}>
-                {services.map((service) => (
+                {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map((service) => (
                     <div key={service.id} style={{
                         backgroundColor: 'var(--color-white)',
                         borderRadius: '16px',
@@ -133,6 +136,89 @@ const Services = () => {
                             }}
                         >
                             Book Now
+                        </Link>
+                    </div>
+                ))}
+            </div>
+
+            {/* Add-ons Grid */}
+            <h2 style={{ fontSize: '1.75rem', color: 'var(--color-secondary)', marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>Popular Menu Add-ons</h2>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '2rem'
+            }}>
+                {services.filter(s => (s.duration || '').toLowerCase() === 'add-on').map((service) => (
+                    <div key={service.id} style={{
+                        backgroundColor: 'var(--color-white)',
+                        borderRadius: '16px',
+                        padding: '2rem',
+                        boxShadow: 'var(--shadow-md)',
+                        position: 'relative',
+                        border: service.popular ? '1px solid var(--color-primary)' : '1px solid transparent',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'baseline',
+                            marginBottom: '1rem'
+                        }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>{service.name}</h3>
+                            <span style={{ fontSize: '1.25rem', color: 'var(--color-primary)', fontWeight: '700' }}>
+                                {service.price}
+                            </span>
+                        </div>
+
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginBottom: '1rem',
+                            fontSize: '0.875rem',
+                            opacity: 0.6
+                        }}>
+                            <span>Type: {service.duration}</span>
+                        </div>
+
+                        <p style={{ marginBottom: '1.5rem', opacity: 0.8, flex: 1 }}>
+                            {service.description}
+                        </p>
+
+                        {/* Gallery of Uploaded Images */}
+                        {service.images && service.images.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                                {service.images.slice(0, 3).map((img, idx) => (
+                                    <div key={idx} style={{ aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f5f5' }}>
+                                        {idx === 2 && service.images.length > 3 ? (
+                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: '#fff', fontWeight: '600' }}>
+                                                    +{service.images.length - 2} More
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <Link
+                            to={`/book`}
+                            style={{
+                                textAlign: 'center',
+                                backgroundColor: 'var(--color-secondary)',
+                                color: 'var(--color-white)',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                fontWeight: '500',
+                                transition: 'background-color 0.2s',
+                            }}
+                        >
+                            Book Appointment
                         </Link>
                     </div>
                 ))}

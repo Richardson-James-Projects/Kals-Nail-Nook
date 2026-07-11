@@ -57,6 +57,7 @@ const TechDashboard = () => {
     const [bookingError, setBookingError] = useState('');
     const [bookingClientType, setBookingClientType] = useState('guest');
     const [selectedClientUser, setSelectedClientUser] = useState('');
+    const [bookingSelectedAddons, setBookingSelectedAddons] = useState([]);
     const [bookingFormData, setBookingFormData] = useState({
         service: '',
         techId: '',
@@ -106,7 +107,8 @@ const TechDashboard = () => {
                     pictures: b.pictures || [],
                     createdAt: b.created_at,
                     bookedBy: b.booked_by,
-                    techDismissed: b.tech_dismissed || false
+                    techDismissed: b.tech_dismissed || false,
+                    addons: b.addons || []
                 }));
                 setAllBookingsList(loadedBookings);
 
@@ -756,8 +758,9 @@ const TechDashboard = () => {
 
     const openBookingModal = () => {
         setBookingError('');
+        const mainServices = services.filter(s => (s.duration || '').toLowerCase() !== 'add-on');
         setBookingFormData({
-            service: services[0]?.id || '',
+            service: mainServices[0]?.id || services[0]?.id || '',
             techId: techId || technicians[0]?.id || '',
             date: new Date().toISOString().split('T')[0],
             time: '09:00 AM',
@@ -767,6 +770,7 @@ const TechDashboard = () => {
         });
         setBookingClientType('guest');
         setSelectedClientUser('');
+        setBookingSelectedAddons([]);
         setIsBookingAppt(true);
     };
 
@@ -825,7 +829,8 @@ const TechDashboard = () => {
             serviceName: serviceObj ? serviceObj.name : 'Service',
             createdAt: new Date().toISOString(),
             bookedBy: user?.email,
-            status: 'Confirmed'
+            status: 'Confirmed',
+            addons: bookingSelectedAddons
         };
 
         if (isSupabaseConfigured) {
@@ -844,7 +849,8 @@ const TechDashboard = () => {
                     email: newBooking.email,
                     status: newBooking.status,
                     created_at: newBooking.createdAt,
-                    booked_by: newBooking.bookedBy
+                    booked_by: newBooking.bookedBy,
+                    addons: newBooking.addons
                 };
                 const { error } = await supabase.from('bookings').insert([dbBooking]);
                 if (error) {
@@ -966,7 +972,14 @@ const TechDashboard = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <User size={16} style={{ opacity: 0.5 }} /> {appt.name}
                                         </div>
-                                        <div>{appt.serviceName}</div>
+                                         <div>
+                                             <strong>{appt.serviceName}</strong>
+                                             {appt.addons && appt.addons.length > 0 && (
+                                                 <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                                                     + {appt.addons.map(addon => addon.split(' (')[0]).join(', ')}
+                                                 </div>
+                                             )}
+                                         </div>
                                         <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
                                             {appt.phone && appt.phone !== 'N/A' && (
                                                 <>{formatPhoneNumber(appt.phone)}<br/></>
@@ -1838,8 +1851,8 @@ const TechDashboard = () => {
                             <hr style={{ border: '0', borderTop: '1px solid #eee', margin: '0.5rem 0' }} />
 
                             {/* Service and Tech */}
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                                <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service</label>
                                     <select 
                                         value={bookingFormData.service} 
@@ -1847,7 +1860,7 @@ const TechDashboard = () => {
                                         required 
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
-                                        {services.map(s => (
+                                        {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map(s => (
                                             <option key={s.id} value={s.id}>{s.name} ({s.price})</option>
                                         ))}
                                     </select>
@@ -1864,6 +1877,47 @@ const TechDashboard = () => {
                                             <option key={t.id} value={t.id}>{t.name}</option>
                                         ))}
                                     </select>
+                                </div>
+                            </div>
+
+                            {/* Add-ons checkboxes */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Select Add-ons (Optional)</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
+                                    {services.filter(s => (s.duration || '').toLowerCase() === 'add-on').map(s => {
+                                        const isChecked = bookingSelectedAddons.includes(`${s.name} (${s.price})`);
+                                        return (
+                                            <label key={s.id} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                padding: '0.5rem',
+                                                border: isChecked ? '2px solid var(--color-primary)' : '1px solid #ddd',
+                                                backgroundColor: isChecked ? '#f0f9ff' : '#fff',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem',
+                                                transition: 'all 0.2s'
+                                            }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setBookingSelectedAddons(prev => [...prev, `${s.name} (${s.price})`]);
+                                                        } else {
+                                                            setBookingSelectedAddons(prev => prev.filter(a => a !== `${s.name} (${s.price})`));
+                                                        }
+                                                    }}
+                                                    style={{ accentColor: 'var(--color-primary)' }}
+                                                />
+                                                <div>
+                                                    <strong>{s.name}</strong>
+                                                    <div style={{ opacity: 0.7 }}>{s.price}</div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

@@ -36,6 +36,7 @@ const Booking = () => {
     const [designNotes, setDesignNotes] = useState('');
     const [designPictures, setDesignPictures] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
+    const [selectedAddons, setSelectedAddons] = useState([]);
 
     useEffect(() => {
         if (user && !isBookingForSomeoneElse) {
@@ -50,8 +51,9 @@ const Booking = () => {
                     if (errServices) throw errServices;
                     const loadedServices = dbServices || [];
                     setServices(loadedServices);
-                    if (loadedServices.length > 0 && !formData.service) {
-                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                    const mainServices = loadedServices.filter(s => (s.duration || '').toLowerCase() !== 'add-on');
+                    if (mainServices.length > 0 && !formData.service) {
+                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || mainServices[0].id }));
                     }
 
                     // Fetch technicians
@@ -119,8 +121,9 @@ const Booking = () => {
                     const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
                     loadedServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
                     setServices(loadedServices);
-                    if (loadedServices.length > 0 && !formData.service) {
-                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                    const mainServices = loadedServices.filter(s => (s.duration || '').toLowerCase() !== 'add-on');
+                    if (mainServices.length > 0 && !formData.service) {
+                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || mainServices[0].id }));
                     }
 
                     const loadedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
@@ -142,8 +145,9 @@ const Booking = () => {
                 const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
                 loadedServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
                 setServices(loadedServices);
-                if (loadedServices.length > 0 && !formData.service) {
-                    setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                const mainServices = loadedServices.filter(s => (s.duration || '').toLowerCase() !== 'add-on');
+                if (mainServices.length > 0 && !formData.service) {
+                    setFormData(prev => ({ ...prev, service: searchParams.get('service') || mainServices[0].id }));
                 }
 
                 const loadedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
@@ -300,7 +304,8 @@ const Booking = () => {
             bookedBy: user?.email,
             status: 'Pending',
             notes: designNotes,
-            pictures: designPictures
+            pictures: designPictures,
+            addons: selectedAddons
         };
 
         const saveBooking = async () => {
@@ -320,7 +325,8 @@ const Booking = () => {
                     notes: booking.notes,
                     pictures: booking.pictures,
                     created_at: booking.createdAt,
-                    booked_by: booking.bookedBy
+                    booked_by: booking.bookedBy,
+                    addons: booking.addons
                 };
                 const { error } = await supabase.from('bookings').insert([dbBooking]);
                 if (error) {
@@ -342,6 +348,35 @@ const Booking = () => {
             value = formatPhoneNumber(value);
         }
         setFormData({ ...formData, [e.target.name]: value });
+    };
+
+    const getPricesInfo = () => {
+        const mainServiceObj = services.find(s => s.id === formData.service);
+        if (!mainServiceObj) return { mainPrice: 0, addonsPrice: 0, total: 0 };
+        
+        const parsePrice = (priceStr) => {
+            if (!priceStr) return 0;
+            const numeric = priceStr.replace(/[^0-9]/g, '');
+            return parseInt(numeric, 10) || 0;
+        };
+
+        const mainPrice = parsePrice(mainServiceObj.price);
+        
+        let addonsPrice = 0;
+        selectedAddons.forEach(addonNameWithPrice => {
+            const match = addonNameWithPrice.match(/\(\$([0-9]+)\)/);
+            if (match && match[1]) {
+                addonsPrice += parseInt(match[1], 10);
+            }
+        });
+
+        return {
+            mainPrice,
+            addonsPrice,
+            total: mainPrice + addonsPrice,
+            mainPriceStr: mainServiceObj.price,
+            totalPriceStr: `$${mainPrice + addonsPrice}`
+        };
     };
 
     return (
@@ -370,7 +405,7 @@ const Booking = () => {
                             required
                         >
                             <option value="" disabled>Choose a service...</option>
-                            {services.map(s => (
+                            {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map(s => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
@@ -390,6 +425,47 @@ const Booking = () => {
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
+                    </div>
+                </div>
+
+                {/* Add-ons checkboxes */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.95rem' }}>Select Add-ons (Optional)</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        {services.filter(s => (s.duration || '').toLowerCase() === 'add-on').map(s => {
+                            const isChecked = selectedAddons.includes(`${s.name} (${s.price})`);
+                            return (
+                                <label key={s.id} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    padding: '0.75rem',
+                                    border: isChecked ? '2px solid var(--color-primary)' : '1px solid #ddd',
+                                    backgroundColor: isChecked ? '#f0f9ff' : '#fff',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.2s'
+                                }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedAddons(prev => [...prev, `${s.name} (${s.price})`]);
+                                            } else {
+                                                setSelectedAddons(prev => prev.filter(a => a !== `${s.name} (${s.price})`));
+                                            }
+                                        }}
+                                        style={{ accentColor: 'var(--color-primary)' }}
+                                    />
+                                    <div>
+                                        <strong>{s.name}</strong>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>{s.price}</div>
+                                    </div>
+                                </label>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -609,6 +685,44 @@ const Booking = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Price Breakdown Summary */}
+                {(() => {
+                    const priceInfo = getPricesInfo();
+                    if (priceInfo.total === 0) return null;
+                    return (
+                        <div style={{
+                            backgroundColor: '#f9fafb',
+                            padding: '1.25rem',
+                            borderRadius: '8px',
+                            border: '1px solid #eee',
+                            marginBottom: '1.5rem',
+                            fontSize: '0.95rem'
+                        }}>
+                            <h4 style={{ fontWeight: '600', marginBottom: '0.75rem', color: 'var(--color-secondary)' }}>Price Summary</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ opacity: 0.8 }}>Main Treatment:</span>
+                                <span style={{ fontWeight: '500' }}>{priceInfo.mainPriceStr}</span>
+                            </div>
+                            {selectedAddons.length > 0 && (
+                                <div style={{ marginBottom: '0.5rem', borderBottom: '1px dashed #eee', paddingBottom: '0.5rem' }}>
+                                    <div style={{ opacity: 0.8, marginBottom: '0.3rem' }}>Add-ons:</div>
+                                    {selectedAddons.map((addon, idx) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', paddingLeft: '0.75rem', opacity: 0.7 }}>
+                                            <span>• {addon.split(' (')[0]}</span>
+                                            <span>{addon.match(/\(\$([0-9]+)\)/) ? `$${addon.match(/\(\$([0-9]+)\)/)[1]}` : ''}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '1.05rem', color: 'var(--color-secondary)', marginTop: '0.5rem' }}>
+                                <span>Estimated Total:</span>
+                                <span>{priceInfo.totalPriceStr}</span>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 <button
                     type="submit"
                     disabled={!formData.time || !formData.date}

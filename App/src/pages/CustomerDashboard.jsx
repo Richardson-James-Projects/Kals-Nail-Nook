@@ -55,7 +55,8 @@ const CustomerDashboard = () => {
                     notes: b.notes,
                     pictures: b.pictures || [],
                     createdAt: b.created_at,
-                    bookedBy: b.booked_by
+                    bookedBy: b.booked_by,
+                    addons: b.addons || []
                 }));
                 setAppointments(loadedBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
             } catch (e) {
@@ -272,6 +273,11 @@ const CustomerDashboard = () => {
                                                     <div>
                                                         <div style={{ fontWeight: '600', fontSize: '1.1rem', marginBottom: '0.25rem' }}>
                                                             {appt.serviceName}
+                                                            {appt.addons && appt.addons.length > 0 && (
+                                                                <span style={{ display: 'block', fontSize: '0.85rem', color: '#666', fontWeight: '400', marginTop: '0.25rem' }}>
+                                                                    + {appt.addons.map(a => a.split(' (')[0]).join(', ')}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>
                                                             {new Date(appt.date).toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
@@ -346,6 +352,11 @@ const CustomerDashboard = () => {
                                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                         <div style={{ fontWeight: '600', fontSize: '1.1rem', marginBottom: '0.25rem', color: '#475569' }}>
                                                             {appt.serviceName}
+                                                            {appt.addons && appt.addons.length > 0 && (
+                                                                <span style={{ display: 'block', fontSize: '0.85rem', color: '#666', fontWeight: '400', marginTop: '0.25rem' }}>
+                                                                    + {appt.addons.map(a => a.split(' (')[0]).join(', ')}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <span style={{ fontSize: '0.85rem', fontWeight: '600', color: appt.status === 'Cancelled' ? '#ef4444' : '#64748b' }}>
                                                             {appt.status || 'Completed'}
