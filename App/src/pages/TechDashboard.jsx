@@ -782,8 +782,8 @@ const TechDashboard = () => {
         }
 
         let clientName = '';
-        let clientPhone = null;
-        let clientEmail = null;
+        let clientPhone = '';
+        let clientEmail = '';
 
         if (bookingClientType === 'customer') {
             const customerObj = usersList.find(u => u.id === selectedClientUser);
@@ -792,16 +792,16 @@ const TechDashboard = () => {
                 return;
             }
             clientName = customerObj.name;
-            clientPhone = customerObj.phone ? cleanPhoneNumber(customerObj.phone) : null;
-            clientEmail = customerObj.email || null;
+            clientPhone = customerObj.phone ? cleanPhoneNumber(customerObj.phone) : '';
+            clientEmail = customerObj.email || '';
         } else {
             if (!guestName) {
                 setBookingError('Please enter the client name.');
                 return;
             }
             clientName = guestName;
-            clientPhone = guestPhone ? cleanPhoneNumber(guestPhone) : null;
-            clientEmail = guestEmail || null;
+            clientPhone = guestPhone ? cleanPhoneNumber(guestPhone) : '';
+            clientEmail = guestEmail || '';
         }
 
         let assignedTechId = bookingTechId;
