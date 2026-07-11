@@ -956,8 +956,8 @@ const TechDashboard = () => {
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Price</label>
-                                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
-                                        <span style={{ padding: '0.6rem 0.5rem 0.6rem 0.75rem', backgroundColor: '#f5f5f5', borderRight: '1px solid #ddd', fontWeight: '600', color: '#555', userSelect: 'none' }}>$</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
+                                        <span style={{ padding: '0 0.5rem 0 0.75rem', backgroundColor: '#f5f5f5', borderRight: '1px solid #ddd', fontWeight: '600', color: '#555', userSelect: 'none', height: '100%', display: 'flex', alignItems: 'center' }}>$</span>
                                         <input
                                             type="text"
                                             name="price"
@@ -965,7 +965,7 @@ const TechDashboard = () => {
                                             required
                                             placeholder="50+"
                                             onChange={(e) => { e.target.value = e.target.value.replace(/^\$+/, ''); }}
-                                            style={{ flex: 1, padding: '0.6rem', border: 'none', outline: 'none', borderRadius: 0 }}
+                                            style={{ flex: 1, padding: '0 0.6rem', border: 'none', outline: 'none', borderRadius: 0, height: '100%', boxSizing: 'border-box' }}
                                         />
                                     </div>
                                 </div>
@@ -978,7 +978,7 @@ const TechDashboard = () => {
                                         const durNum = isAddOn ? '' : (parts[0] || '');
                                         const durUnit = isAddOn ? 'Add-on' : (['min','hr'].includes(parts[1]) ? parts[1] : 'min');
                                         return (
-                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
                                                 <input
                                                     type="number"
                                                     name="durationValue"
@@ -986,12 +986,12 @@ const TechDashboard = () => {
                                                     min="1"
                                                     placeholder="60"
                                                     required={durUnit !== 'Add-on'}
-                                                    style={{ width: '65px', padding: '0.6rem', border: 'none', outline: 'none', borderRight: '1px solid #ddd', textAlign: 'center' }}
+                                                    style={{ width: '65px', padding: '0 0.5rem', border: 'none', outline: 'none', borderRight: '1px solid #ddd', textAlign: 'center', height: '100%', boxSizing: 'border-box' }}
                                                 />
                                                 <select
                                                     name="durationUnit"
                                                     defaultValue={durUnit}
-                                                    style={{ flex: 1, padding: '0.6rem', border: 'none', outline: 'none', backgroundColor: '#fff', cursor: 'pointer' }}
+                                                    style={{ flex: 1, padding: '0 0.5rem', border: 'none', outline: 'none', backgroundColor: '#fff', cursor: 'pointer', height: '100%', boxSizing: 'border-box' }}
                                                 >
                                                     <option value="min">min</option>
                                                     <option value="hr">hr</option>
