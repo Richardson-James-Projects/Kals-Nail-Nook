@@ -103,6 +103,11 @@ const Booking = () => {
                     }));
                     setExistingBookings(loadedBookings);
 
+                    // Fetch blocked dates
+                    const { data: dbBlocked } = await supabase.from('blocked_dates').select('*');
+                    const loadedBlocked = (dbBlocked || []).map(d => d.date);
+                    setBlockedDates(loadedBlocked);
+
                 } catch (e) {
                     console.error('Error fetching data from Supabase:', e);
                 }
@@ -124,10 +129,10 @@ const Booking = () => {
 
                 const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
                 setExistingBookings(bookings);
-            }
 
-            const loadedBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
-            setBlockedDates(loadedBlocked);
+                const loadedBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
+                setBlockedDates(loadedBlocked);
+            }
         };
 
         loadData();

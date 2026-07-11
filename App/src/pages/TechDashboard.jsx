@@ -132,6 +132,11 @@ const TechDashboard = () => {
                 }));
                 setUsersList(loadedUsers);
 
+                // Fetch blocked dates
+                const { data: dbBlocked } = await supabase.from('blocked_dates').select('*');
+                const loadedBlocked = (dbBlocked || []).map(d => d.date);
+                setBlockedDates(loadedBlocked);
+
             } catch (e) {
                 console.error('Error fetching dashboard data from Supabase:', e);
             }
@@ -155,10 +160,10 @@ const TechDashboard = () => {
             const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
             setUsersList(allUsers);
             setTechnicians(techs);
-        }
 
-        const lBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
-        setBlockedDates(lBlocked);
+            const lBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
+            setBlockedDates(lBlocked);
+        }
     };
 
     useEffect(() => {
@@ -297,18 +302,44 @@ const TechDashboard = () => {
     };
 
     // --- BLOCKED DATES ACTIONS ---
-    const handleAddBlockedDate = () => {
+    const handleAddBlockedDate = async () => {
         if (!newBlockedDate || blockedDates.includes(newBlockedDate)) return;
-        const updated = [...blockedDates, newBlockedDate].sort();
-        setBlockedDates(updated);
-        localStorage.setItem('blockedDates', JSON.stringify(updated));
+        
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('blocked_dates')
+                    .insert([{ date: newBlockedDate }]);
+                if (error) console.error('Error inserting blocked date in Supabase:', error);
+            } catch (e) {
+                console.error('Error adding blocked date:', e);
+            }
+            await fetchDashboardData(techId);
+        } else {
+            const updated = [...blockedDates, newBlockedDate].sort();
+            setBlockedDates(updated);
+            localStorage.setItem('blockedDates', JSON.stringify(updated));
+        }
         setNewBlockedDate('');
     };
 
-    const handleRemoveBlockedDate = (date) => {
-        const updated = blockedDates.filter(d => d !== date);
-        setBlockedDates(updated);
-        localStorage.setItem('blockedDates', JSON.stringify(updated));
+    const handleRemoveBlockedDate = async (date) => {
+        if (isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('blocked_dates')
+                    .delete()
+                    .eq('date', date);
+                if (error) console.error('Error deleting blocked date in Supabase:', error);
+            } catch (e) {
+                console.error('Error removing blocked date:', e);
+            }
+            await fetchDashboardData(techId);
+        } else {
+            const updated = blockedDates.filter(d => d !== date);
+            setBlockedDates(updated);
+            localStorage.setItem('blockedDates', JSON.stringify(updated));
+        }
     };
 
     // --- SERVICES ACTIONS ---
