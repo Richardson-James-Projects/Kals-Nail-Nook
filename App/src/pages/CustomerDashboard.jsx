@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, PenTool, Save, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
 const CustomerDashboard = () => {
     const { user } = useAuth();
@@ -14,13 +14,31 @@ const CustomerDashboard = () => {
     const [tempPictures, setTempPictures] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
 
+    const filterMyBookings = (list) => {
+        if (!user) return [];
+        return list.filter(b => {
+            const nameMatch = b.name === user.name;
+            const emailMatch = user.email && b.email && b.email.toLowerCase() === user.email.toLowerCase();
+            const phoneMatch = user.phone && b.phone && cleanPhoneNumber(b.phone) === cleanPhoneNumber(user.phone);
+            return nameMatch || emailMatch || phoneMatch;
+        });
+    };
+
     const fetchAppointments = async () => {
+        if (!user) return;
         if (isSupabaseConfigured) {
             try {
-                const { data: dbBookings } = await supabase
-                    .from('bookings')
-                    .select('*')
-                    .or(`name.eq."${user.name}",email.eq."${user.email}"`);
+                const orConditions = [];
+                if (user.name) orConditions.push(`name.eq."${user.name}"`);
+                if (user.email) orConditions.push(`email.eq."${user.email}"`);
+                if (user.phone) orConditions.push(`phone.eq."${cleanPhoneNumber(user.phone)}"`);
+
+                let query = supabase.from('bookings').select('*');
+                if (orConditions.length > 0) {
+                    query = query.or(orConditions.join(','));
+                }
+                const { data: dbBookings, error } = await query;
+                if (error) throw error;
 
                 const loadedBookings = (dbBookings || []).map(b => ({
                     id: b.id,
@@ -41,11 +59,14 @@ const CustomerDashboard = () => {
                 }));
                 setAppointments(loadedBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
             } catch (e) {
-                console.error('Error fetching appointments from Supabase:', e);
+                console.error('Error fetching appointments from Supabase, using localStorage fallback:', e);
+                const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                const myBookings = filterMyBookings(allBookings);
+                setAppointments(myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
             }
         } else {
             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-            const myBookings = allBookings.filter(b => b.name === user.name || b.email === user.email);
+            const myBookings = filterMyBookings(allBookings);
             setAppointments(myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
         }
     };
@@ -121,7 +142,7 @@ const CustomerDashboard = () => {
             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
             const updated = allBookings.map(b => b.id === editingAppt.id ? { ...b, notes: tempNotes, pictures: tempPictures } : b);
             localStorage.setItem('bookings', JSON.stringify(updated));
-            setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+            setAppointments(filterMyBookings(updated).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
         }
         setEditingAppt(null);
     };
@@ -145,7 +166,7 @@ const CustomerDashboard = () => {
                 const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
                 const updated = allBookings.map(b => b.id === apptId ? { ...b, notes: '', pictures: [] } : b);
                 localStorage.setItem('bookings', JSON.stringify(updated));
-                setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+                setAppointments(filterMyBookings(updated).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
             }
         }
     };
@@ -169,7 +190,7 @@ const CustomerDashboard = () => {
                  const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
                  const updated = allBookings.map(b => b.id === id ? { ...b, status: 'Cancelled'} : b);
                  localStorage.setItem('bookings', JSON.stringify(updated));
-                 setAppointments(updated.filter(b => b.name === user.name || b.email === user.email).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
+                 setAppointments(filterMyBookings(updated).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`)));
             }
         }
     };

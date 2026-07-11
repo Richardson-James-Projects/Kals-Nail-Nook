@@ -739,8 +739,8 @@ const TechDashboard = () => {
         }
 
         let clientName = '';
-        let clientPhone = '';
-        let clientEmail = '';
+        let clientPhone = null;
+        let clientEmail = null;
 
         if (bookingClientType === 'customer') {
             const customerObj = usersList.find(u => u.id === selectedClientUser);
@@ -749,16 +749,16 @@ const TechDashboard = () => {
                 return;
             }
             clientName = customerObj.name;
-            clientPhone = customerObj.phone || 'N/A';
-            clientEmail = customerObj.email;
+            clientPhone = customerObj.phone ? cleanPhoneNumber(customerObj.phone) : null;
+            clientEmail = customerObj.email || null;
         } else {
             if (!guestName) {
                 setBookingError('Please enter the client name.');
                 return;
             }
             clientName = guestName;
-            clientPhone = guestPhone || 'N/A';
-            clientEmail = guestEmail || 'guest@example.com';
+            clientPhone = guestPhone ? cleanPhoneNumber(guestPhone) : null;
+            clientEmail = guestEmail || null;
         }
 
         const techObj = technicians.find(t => t.id === bookingTechId);
@@ -900,7 +900,12 @@ const TechDashboard = () => {
                                             <User size={16} style={{ opacity: 0.5 }} /> {appt.name}
                                         </div>
                                         <div>{appt.serviceName}</div>
-                                        <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{formatPhoneNumber(appt.phone) || 'N/A'}<br/>{appt.email || 'N/A'}</div>
+                                        <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
+                                            {appt.phone && appt.phone !== 'N/A' && (
+                                                <>{formatPhoneNumber(appt.phone)}<br/></>
+                                            )}
+                                            {appt.email && appt.email !== 'guest@example.com' && appt.email !== 'N/A' ? appt.email : (!appt.phone || appt.phone === 'N/A' ? 'No contact' : '')}
+                                        </div>
                                         
                                         {/* Status Dropdown */}
                                         <div>
@@ -1236,8 +1241,8 @@ const TechDashboard = () => {
                                                 <td style={{ padding: '1rem', fontWeight: '500' }}>
                                                     {u.name} {u.email && u.email === user?.email && <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem' }}>You</span>}
                                                 </td>
-                                                <td style={{ padding: '1rem', color: '#555' }}>{u.email || 'N/A'}</td>
-                                                <td style={{ padding: '1rem', color: '#555' }}>{formatPhoneNumber(u.phone) || 'N/A'}</td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{u.email && u.email !== 'guest@example.com' && u.email !== 'N/A' ? u.email : ''}</td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{u.phone && u.phone !== 'N/A' ? formatPhoneNumber(u.phone) : ''}</td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <span style={{ 
                                                         fontSize: '0.8rem', 
