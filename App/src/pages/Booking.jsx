@@ -46,7 +46,8 @@ const Booking = () => {
             if (isSupabaseConfigured) {
                 try {
                     // Fetch services
-                    const { data: dbServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
+                    const { data: dbServices, error: errServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
+                    if (errServices) throw errServices;
                     const loadedServices = dbServices || [];
                     setServices(loadedServices);
                     if (loadedServices.length > 0 && !formData.service) {
@@ -54,12 +55,14 @@ const Booking = () => {
                     }
 
                     // Fetch technicians
-                    const { data: dbTechs } = await supabase.from('technicians').select('*');
+                    const { data: dbTechs, error: errTechs } = await supabase.from('technicians').select('*');
+                    if (errTechs) throw errTechs;
                     const loadedTechs = dbTechs || [];
                     setTechnicians(loadedTechs);
 
                     // Fetch schedules
-                    const { data: dbSchedules } = await supabase.from('schedules').select('*');
+                    const { data: dbSchedules, error: errSchedules } = await supabase.from('schedules').select('*');
+                    if (errSchedules) throw errSchedules;
                     const schedules = {};
                     loadedTechs.forEach(t => {
                         schedules[t.id] = [];
@@ -79,10 +82,11 @@ const Booking = () => {
                     setTechSchedules(schedules);
 
                     // Fetch existing bookings
-                    const { data: dbBookings } = await supabase
+                    const { data: dbBookings, error: errBookings } = await supabase
                         .from('bookings')
                         .select('*')
                         .neq('status', 'Cancelled');
+                    if (errBookings) throw errBookings;
                     
                     const loadedBookings = (dbBookings || []).map(b => ({
                         id: b.id,
@@ -104,12 +108,35 @@ const Booking = () => {
                     setExistingBookings(loadedBookings);
 
                     // Fetch blocked dates
-                    const { data: dbBlocked } = await supabase.from('blocked_dates').select('*');
+                    const { data: dbBlocked, error: errBlocked } = await supabase.from('blocked_dates').select('*');
+                    if (errBlocked) throw errBlocked;
                     const loadedBlocked = (dbBlocked || []).map(d => d.date);
                     setBlockedDates(loadedBlocked);
 
                 } catch (e) {
-                    console.error('Error fetching data from Supabase:', e);
+                    console.error('Error fetching data from Supabase, using localStorage fallback:', e);
+                    // Fallback to localStorage if database fails
+                    const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
+                    loadedServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+                    setServices(loadedServices);
+                    if (loadedServices.length > 0 && !formData.service) {
+                        setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));
+                    }
+
+                    const loadedTechs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                    setTechnicians(loadedTechs);
+
+                    const schedules = {};
+                    loadedTechs.forEach(t => {
+                        schedules[t.id] = JSON.parse(localStorage.getItem(`schedule_${t.id}`) || '[]');
+                    });
+                    setTechSchedules(schedules);
+
+                    const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                    setExistingBookings(bookings);
+
+                    const loadedBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
+                    setBlockedDates(loadedBlocked);
                 }
             } else {
                 const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');

@@ -75,7 +75,8 @@ const TechDashboard = () => {
         if (isSupabaseConfigured) {
             try {
                 // Fetch technicians
-                const { data: dbTechs } = await supabase.from('technicians').select('*');
+                const { data: dbTechs, error: errTechs } = await supabase.from('technicians').select('*');
+                if (errTechs) throw errTechs;
                 const loadedTechs = dbTechs || [];
                 setTechnicians(loadedTechs);
 
@@ -85,13 +86,15 @@ const TechDashboard = () => {
                 setTechId(activeTechId);
 
                 // Fetch bookings
-                const { data: dbBookings } = await supabase.from('bookings').select('*');
+                const { data: dbBookings, error: errBookings } = await supabase.from('bookings').select('*');
+                if (errBookings) throw errBookings;
+                
                 const loadedBookings = (dbBookings || []).map(b => ({
                     id: b.id,
                     service: b.service,
-                    serviceName: b.service_name,
-                    techId: b.tech_id,
-                    techName: b.tech_name,
+                    service_name: b.service_name,
+                    tech_id: b.tech_id,
+                    tech_name: b.tech_name,
                     date: b.date,
                     time: b.time,
                     name: b.name,
@@ -109,10 +112,11 @@ const TechDashboard = () => {
 
                 // Fetch schedules
                 if (activeTechId) {
-                    const { data: dbSchedules } = await supabase
+                    const { data: dbSchedules, error: errSchedules } = await supabase
                         .from('schedules')
                         .select('*')
                         .eq('tech_id', activeTechId);
+                    if (errSchedules) throw errSchedules;
                     
                     if (dbSchedules && dbSchedules.length > 0) {
                         // Map db rows back to schedule format sorted by day of week index
@@ -130,11 +134,13 @@ const TechDashboard = () => {
                 }
 
                 // Fetch services
-                const { data: dbServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
+                const { data: dbServices, error: errServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
+                if (errServices) throw errServices;
                 setServices(dbServices || []);
 
                 // Fetch users
-                const { data: dbUsers } = await supabase.from('nail_nook_users').select('*');
+                const { data: dbUsers, error: errUsers } = await supabase.from('nail_nook_users').select('*');
+                if (errUsers) throw errUsers;
                 const loadedUsers = (dbUsers || []).map(u => ({
                     id: u.id,
                     name: u.name,
@@ -146,12 +152,36 @@ const TechDashboard = () => {
                 setUsersList(loadedUsers);
 
                 // Fetch blocked dates
-                const { data: dbBlocked } = await supabase.from('blocked_dates').select('*');
+                const { data: dbBlocked, error: errBlocked } = await supabase.from('blocked_dates').select('*');
+                if (errBlocked) throw errBlocked;
                 const loadedBlocked = (dbBlocked || []).map(d => d.date);
                 setBlockedDates(loadedBlocked);
 
             } catch (e) {
-                console.error('Error fetching dashboard data from Supabase:', e);
+                console.error('Error fetching dashboard data from Supabase, using fallback:', e);
+                const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
+                const matchingTech = techs.find(t => t.email === user?.email) || techs[0];
+                const activeTechId = currentTechId || matchingTech?.id;
+                setTechId(activeTechId);
+
+                const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+                const myBookings = allBookings.filter(b => b.techId === activeTechId || b.techId === 'any');
+                myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+                setAppointments(myBookings);
+
+                const savedSchedule = JSON.parse(localStorage.getItem(`schedule_${activeTechId}`));
+                if (savedSchedule) setSchedule(savedSchedule);
+
+                const lServices = JSON.parse(localStorage.getItem('services') || '[]');
+                lServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+                setServices(lServices);
+
+                const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+                setUsersList(allUsers);
+                setTechnicians(techs);
+
+                const lBlocked = JSON.parse(localStorage.getItem('blockedDates') || '[]');
+                setBlockedDates(lBlocked);
             }
         } else {
             const techs = JSON.parse(localStorage.getItem('technicians') || '[]');
