@@ -24,14 +24,17 @@ const TechDashboard = () => {
     const [editingService, setEditingService] = useState(null);
     const [servicePictures, setServicePictures] = useState([]);
     const [isUploadingServicePhotos, setIsUploadingServicePhotos] = useState(false);
+    const [isServiceAddOn, setIsServiceAddOn] = useState(false);
 
-    const openServiceModal = (service = null) => {
+    const openServiceModal = (service = null, defaultAsAddon = false) => {
         if (service) {
             setEditingService(service);
             setServicePictures(service.images || []);
+            setIsServiceAddOn((service.duration || '').toLowerCase() === 'add-on');
         } else {
             setEditingService({});
             setServicePictures([]);
+            setIsServiceAddOn(defaultAsAddon);
         }
     };
 
@@ -489,7 +492,7 @@ const TechDashboard = () => {
             id: editingService.id || `service-${Date.now()}`,
             name: fd.get('name'),
             price: '$' + fd.get('price').replace(/^\$+/, ''),
-            duration: fd.get('durationUnit') === 'Add-on' ? 'Add-on' : `${fd.get('durationValue')} ${fd.get('durationUnit')}`,
+            duration: isServiceAddOn ? 'Add-on' : `${fd.get('durationValue')} ${fd.get('durationUnit')}`,
             description: fd.get('description'),
             popular: fd.get('popular') === 'on',
             images: servicePictures,
@@ -1188,17 +1191,20 @@ const TechDashboard = () => {
                         padding: '2rem',
                         boxShadow: 'var(--shadow-sm)'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Menu & Services Management</h2>
-                            <button onClick={()=> openServiceModal()} style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600'
+                        <h2 style={{ fontSize: '1.45rem', margin: '0 0 2rem 0', borderBottom: '2px solid #f3f4f6', paddingBottom: '0.75rem', color: 'var(--color-secondary)' }}>Menu & Services Management</h2>
+
+                        {/* Nail Treatments Menu Section */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: '600' }}>Nail Treatments Menu</h3>
+                            <button onClick={()=> openServiceModal(null, false)} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer'
                              }}>
                                 <Plus size={16} /> Add Service
                             </button>
                         </div>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                            {services.map((s, index) => (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+                            {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map((s, index) => (
                                 <div key={s.id} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', position: 'relative' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{s.name}</h3>
@@ -1231,11 +1237,72 @@ const TechDashboard = () => {
                                             </button>
                                             <button 
                                                 onClick={() => handleMoveService(s.id, 'down')}
-                                                disabled={index === services.length - 1}
+                                                disabled={index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1}
                                                 style={{ 
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
-                                                    backgroundColor: '#f3f4f6', color: index === services.length - 1 ? '#d1d5db' : '#4b5563', 
-                                                    borderRadius: '4px', border: 'none', cursor: index === services.length - 1 ? 'not-allowed' : 'pointer' 
+                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? '#d1d5db' : '#4b5563', 
+                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? 'not-allowed' : 'pointer' 
+                                                }}
+                                                title="Move Right"
+                                            >
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {s.popular && <span style={{ position: 'absolute', top: '-10px', right: '10px', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>POPULAR</span>}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Booking Add-ons Section */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: '600' }}>Booking Add-ons</h3>
+                            <button onClick={()=> openServiceModal(null, true)} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer'
+                             }}>
+                                <Plus size={16} /> Add Add-on
+                            </button>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                            {services.filter(s => (s.duration || '').toLowerCase() === 'add-on').map((s, index) => (
+                                <div key={s.id} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', position: 'relative' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                        <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{s.name}</h3>
+                                        <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{s.price}</span>
+                                    </div>
+                                    <p style={{ opacity: 0.7, fontSize: '0.85rem', marginBottom: '1rem' }}>Type: {s.duration}</p>
+                                    <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{s.description}</p>
+                                    
+                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                                <Edit2 size={14} /> Edit
+                                            </button>
+                                            <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                                <Trash2 size={14} /> Delete
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            <button 
+                                                onClick={() => handleMoveService(s.id, 'up')}
+                                                disabled={index === 0}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
+                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563', 
+                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer' 
+                                                }}
+                                                title="Move Left"
+                                            >
+                                                <ChevronLeft size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleMoveService(s.id, 'down')}
+                                                disabled={index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
+                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? '#d1d5db' : '#4b5563', 
+                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? 'not-allowed' : 'pointer' 
                                                 }}
                                                 title="Move Right"
                                             >
@@ -1563,6 +1630,19 @@ const TechDashboard = () => {
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service Name</label>
                                 <input type="text" name="name" defaultValue={editingService.name} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
                             </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.2rem 0' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="serviceIsAddonCheckbox"
+                                    checked={isServiceAddOn}
+                                    onChange={(e) => setIsServiceAddOn(e.target.checked)}
+                                    style={{ accentColor: 'var(--color-primary)', cursor: 'pointer', width: '18px', height: '18px' }}
+                                />
+                                <label htmlFor="serviceIsAddonCheckbox" style={{ fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', userSelect: 'none' }}>
+                                    This service is an Add-on (Selected during booking)
+                                </label>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Price</label>
@@ -1581,35 +1661,43 @@ const TechDashboard = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Duration</label>
-                                    {(() => {
-                                        const dur = editingService.duration || '';
-                                        const isAddOn = dur.toLowerCase() === 'add-on';
-                                        const parts = dur.split(' ');
-                                        const durNum = isAddOn ? '' : (parts[0] || '');
-                                        const durUnit = isAddOn ? 'Add-on' : (['min','hr'].includes(parts[1]) ? parts[1] : 'min');
-                                        return (
-                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
-                                                <input
-                                                    type="number"
-                                                    name="durationValue"
-                                                    defaultValue={durNum}
-                                                    min="1"
-                                                    placeholder="60"
-                                                    required={durUnit !== 'Add-on'}
-                                                    style={{ width: '65px', padding: '0 0.5rem', border: 'none', outline: 'none', borderRight: '1px solid #ddd', textAlign: 'center', height: '100%', boxSizing: 'border-box' }}
-                                                />
-                                                <select
-                                                    name="durationUnit"
-                                                    defaultValue={durUnit}
-                                                    style={{ flex: 1, padding: '0 0.5rem', border: 'none', outline: 'none', backgroundColor: '#fff', cursor: 'pointer', height: '100%', boxSizing: 'border-box' }}
-                                                >
-                                                    <option value="min">min</option>
-                                                    <option value="hr">hr</option>
-                                                    <option value="Add-on">Add-on</option>
-                                                </select>
-                                            </div>
-                                        );
-                                    })()}
+                                    {isServiceAddOn ? (
+                                        <div style={{ 
+                                            display: 'flex', alignItems: 'center', backgroundColor: '#f3f4f6', color: '#4b5563',
+                                            border: '1px solid #ddd', borderRadius: '6px', height: '2.5rem', padding: '0 0.75rem',
+                                            fontSize: '0.9rem', fontWeight: '600', boxSizing: 'border-box'
+                                        }}>
+                                            Add-on (No duration)
+                                        </div>
+                                    ) : (
+                                        (() => {
+                                            const dur = editingService.duration || '';
+                                            const parts = dur.split(' ');
+                                            const durNum = parts[0] || '60';
+                                            const durUnit = ['min','hr'].includes(parts[1]) ? parts[1] : 'min';
+                                            return (
+                                                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
+                                                    <input
+                                                        type="number"
+                                                        name="durationValue"
+                                                        defaultValue={durNum}
+                                                        min="1"
+                                                        placeholder="60"
+                                                        required
+                                                        style={{ width: '65px', padding: '0 0.5rem', border: 'none', outline: 'none', borderRight: '1px solid #ddd', textAlign: 'center', height: '100%', boxSizing: 'border-box' }}
+                                                    />
+                                                    <select
+                                                        name="durationUnit"
+                                                        defaultValue={durUnit}
+                                                        style={{ flex: 1, padding: '0 0.5rem', border: 'none', outline: 'none', backgroundColor: '#fff', cursor: 'pointer', height: '100%', boxSizing: 'border-box' }}
+                                                    >
+                                                        <option value="min">min</option>
+                                                        <option value="hr">hr</option>
+                                                    </select>
+                                                </div>
+                                            );
+                                        })()
+                                    )}
                                 </div>
                             </div>
 
