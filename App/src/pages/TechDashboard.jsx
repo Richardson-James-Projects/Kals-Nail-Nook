@@ -969,7 +969,7 @@ const TechDashboard = () => {
                             }}>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '1.2fr 1.2fr 1fr 1fr 1fr auto',
+                                    gridTemplateColumns: '1.2fr 1.2fr 1.5fr 1.3fr 1fr 120px',
                                     padding: '1rem',
                                     backgroundColor: '#f9f9f9',
                                     fontWeight: '600',
@@ -988,7 +988,7 @@ const TechDashboard = () => {
                                 {appointments.map((appt, i) => (
                                     <div key={i} style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1.2fr 1.2fr 1fr 1fr 1fr auto',
+                                        gridTemplateColumns: '1.2fr 1.2fr 1.5fr 1.3fr 1fr 120px',
                                         padding: '1rem',
                                         borderBottom: i === appointments.length - 1 ? 'none' : '1px solid #eee',
                                         fontSize: '0.9rem',
