@@ -164,7 +164,7 @@ const TechDashboard = () => {
         const newServiceObj = {
             id: editingService.id || `service-${Date.now()}`,
             name: fd.get('name'),
-            price: fd.get('price'),
+            price: '$' + fd.get('price').replace(/^\$+/, ''),
             duration: fd.get('duration'),
             description: fd.get('description'),
             popular: fd.get('popular') === 'on'
@@ -956,7 +956,18 @@ const TechDashboard = () => {
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Price</label>
-                                    <input type="text" name="price" defaultValue={editingService.price} required placeholder="$50+" style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <span style={{ padding: '0.6rem 0.5rem 0.6rem 0.75rem', backgroundColor: '#f5f5f5', borderRight: '1px solid #ddd', fontWeight: '600', color: '#555', userSelect: 'none' }}>$</span>
+                                        <input
+                                            type="text"
+                                            name="price"
+                                            defaultValue={(editingService.price || '').replace(/^\$/, '')}
+                                            required
+                                            placeholder="50+"
+                                            onChange={(e) => { e.target.value = e.target.value.replace(/^\$+/, ''); }}
+                                            style={{ flex: 1, padding: '0.6rem', border: 'none', outline: 'none', borderRadius: 0 }}
+                                        />
+                                    </div>
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Duration</label>
