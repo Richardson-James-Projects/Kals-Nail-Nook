@@ -165,7 +165,7 @@ const TechDashboard = () => {
             id: editingService.id || `service-${Date.now()}`,
             name: fd.get('name'),
             price: '$' + fd.get('price').replace(/^\$+/, ''),
-            duration: fd.get('duration'),
+            duration: fd.get('durationUnit') === 'Add-on' ? 'Add-on' : `${fd.get('durationValue')} ${fd.get('durationUnit')}`,
             description: fd.get('description'),
             popular: fd.get('popular') === 'on'
         };
@@ -971,7 +971,35 @@ const TechDashboard = () => {
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Duration</label>
-                                    <input type="text" name="duration" defaultValue={editingService.duration} required placeholder="60 min" style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                                    {(() => {
+                                        const dur = editingService.duration || '';
+                                        const isAddOn = dur.toLowerCase() === 'add-on';
+                                        const parts = dur.split(' ');
+                                        const durNum = isAddOn ? '' : (parts[0] || '');
+                                        const durUnit = isAddOn ? 'Add-on' : (['min','hr'].includes(parts[1]) ? parts[1] : 'min');
+                                        return (
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    type="number"
+                                                    name="durationValue"
+                                                    defaultValue={durNum}
+                                                    min="1"
+                                                    placeholder="60"
+                                                    required={durUnit !== 'Add-on'}
+                                                    style={{ width: '70px', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', textAlign: 'center' }}
+                                                />
+                                                <select
+                                                    name="durationUnit"
+                                                    defaultValue={durUnit}
+                                                    style={{ flex: 1, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
+                                                >
+                                                    <option value="min">min</option>
+                                                    <option value="hr">hr</option>
+                                                    <option value="Add-on">Add-on</option>
+                                                </select>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                             <div>
