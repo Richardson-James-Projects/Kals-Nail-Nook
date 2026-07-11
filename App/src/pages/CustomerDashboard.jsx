@@ -4,6 +4,18 @@ import { Calendar, PenTool, Save, Trash2, Upload, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
+const formatDisplayDate = (dateStr, options = undefined) => {
+    if (!dateStr) return '';
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day).toLocaleDateString(undefined, options);
+    }
+    return new Date(dateStr).toLocaleDateString(undefined, options);
+};
+
 const CustomerDashboard = () => {
     const { user } = useAuth();
     const [appointments, setAppointments] = useState([]);
@@ -280,7 +292,7 @@ const CustomerDashboard = () => {
                                                             )}
                                                         </div>
                                                         <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>
-                                                            {new Date(appt.date + 'T00:00:00').toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                            {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'The Nail Nook'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -363,7 +375,7 @@ const CustomerDashboard = () => {
                                                         </span>
                                                     </div>
                                                     <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: (appt.notes || (appt.pictures && appt.pictures.length > 0)) ? '1rem' : '0' }}>
-                                                        {new Date(appt.date + 'T00:00:00').toLocaleDateString()} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                        {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'The Nail Nook'}
                                                     </div>
 
                                                     {(appt.notes || (appt.pictures && appt.pictures.length > 0)) && (
@@ -415,7 +427,7 @@ const CustomerDashboard = () => {
 
                         <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-primary)' }}>Appointment Design Details</h3>
                         <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1.5rem' }}>
-                            {editingAppt.serviceName} — {new Date(editingAppt.date + 'T00:00:00').toLocaleDateString()}
+                            {editingAppt.serviceName} — {formatDisplayDate(editingAppt.date)}
                         </p>
 
                         <div style={{ display: 'grid', gap: '1.25rem', marginBottom: '1.5rem' }}>

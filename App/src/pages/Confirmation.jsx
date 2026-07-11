@@ -2,6 +2,18 @@ import { useLocation, Link } from 'react-router-dom';
 import { CheckCircle, Calendar, Clock, MapPin, UserPlus, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+const formatDisplayDate = (dateStr, options = undefined) => {
+    if (!dateStr) return '';
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day).toLocaleDateString(undefined, options);
+    }
+    return new Date(dateStr).toLocaleDateString(undefined, options);
+};
+
 const Confirmation = () => {
     const { state } = useLocation();
     const { user } = useAuth();
@@ -71,7 +83,7 @@ const Confirmation = () => {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
-                            <div>{new Date(booking.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            <div>{formatDisplayDate(booking.date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

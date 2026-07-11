@@ -13,6 +13,18 @@ const DEFAULT_SCHEDULE = DAYS_OF_WEEK.map(day => ({
     endTime: '17:00'
 }));
 
+const formatDisplayDate = (dateStr, options = undefined) => {
+    if (!dateStr) return '';
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day).toLocaleDateString(undefined, options);
+    }
+    return new Date(dateStr).toLocaleDateString(undefined, options);
+};
+
 const TechDashboard = () => {
     const { user } = useAuth();
     
@@ -985,7 +997,7 @@ const TechDashboard = () => {
                                         opacity: appt.status === 'Cancelled' ? 0.6 : 1
                                     }}>
                                         <div>
-                                            <div style={{ fontWeight: '500' }}>{new Date(appt.date + 'T00:00:00').toLocaleDateString()}</div>
+                                            <div style={{ fontWeight: '500' }}>{formatDisplayDate(appt.date)}</div>
                                             <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>{appt.time}</div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1188,7 +1200,7 @@ const TechDashboard = () => {
                                 {blockedDates.length === 0 && <p style={{ opacity: 0.5, fontSize: '0.9rem', fontStyle: 'italic' }}>No blocked dates.</p>}
                                 {blockedDates.map(d => (
                                     <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', backgroundColor: '#fff5f5', border: '1px solid #fee2e2', borderRadius: '6px' }}>
-                                        <span style={{ fontWeight: '500', color: '#991b1b' }}>{new Date(d + 'T00:00:00').toLocaleDateString()}</span>
+                                        <span style={{ fontWeight: '500', color: '#991b1b' }}>{formatDisplayDate(d)}</span>
                                         <button onClick={() => handleRemoveBlockedDate(d)} style={{ background: 'none', color: '#ef4444' }}>
                                             <Trash2 size={16} />
                                         </button>
@@ -2039,18 +2051,37 @@ const TechDashboard = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
-                                    <input 
-                                        type="text"
-                                        list="techTimeSlots"
-                                        value={bookingFormData.time} 
-                                        onChange={(e) => setBookingFormData({...bookingFormData, time: e.target.value})} 
-                                        required 
-                                        placeholder="e.g. 10:00 AM"
-                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
-                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                        {(() => {
+                                            const timeParts = (bookingFormData.time || '09:00 AM').split(' ');
+                                            const timeVal = timeParts[0] || '09:00';
+                                            const amPmVal = timeParts[1] || 'AM';
+                                            return (
+                                                <>
+                                                    <input 
+                                                        type="text"
+                                                        list="techTimeSlots"
+                                                        value={timeVal} 
+                                                        onChange={(e) => setBookingFormData({...bookingFormData, time: `${e.target.value} ${amPmVal}`})} 
+                                                        required 
+                                                        placeholder="10:00"
+                                                        style={{ flex: 2, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
+                                                    />
+                                                    <select
+                                                        value={amPmVal}
+                                                        onChange={(e) => setBookingFormData({...bookingFormData, time: `${timeVal} ${e.target.value}`})}
+                                                        style={{ flex: 1, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}
+                                                    >
+                                                        <option value="AM">AM</option>
+                                                        <option value="PM">PM</option>
+                                                    </select>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
                                     <datalist id="techTimeSlots">
                                         {TIME_SLOTS.map(t => (
-                                            <option key={t} value={t} />
+                                            <option key={t} value={t.split(' ')[0]} />
                                         ))}
                                     </datalist>
                                 </div>
