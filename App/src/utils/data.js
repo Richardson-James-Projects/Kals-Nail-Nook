@@ -85,11 +85,11 @@ export const initializeData = () => {
     // Default Users (with pre-hashed 'admin123' passwords)
     const defaultUsers = [
         {
-            id: 'tech-sarah',
-            name: 'Sarah (Owner)',
-            email: 'sarah@example.com',
-            phone: '555-0100',
-            passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // SHA-256 for admin123
+            id: 'tech-kallie',
+            name: 'Kallie (Owner)',
+            email: 'kallierichardson16@gmail.com',
+            phone: '385-296-5737',
+            passwordHash: 'ce8995efad4553f000a9e2620b2c8c140797679c018025143a820cf9dffffe07', // SHA-256 for admin123
             role: 'owner'
         },
         {
