@@ -799,9 +799,15 @@ const TechDashboard = () => {
                     booked_by: newBooking.bookedBy
                 };
                 const { error } = await supabase.from('bookings').insert([dbBooking]);
-                if (error) console.error('Error creating booking in Supabase:', error);
+                if (error) {
+                    console.error('Error creating booking in Supabase:', error);
+                    setBookingError(`Database Error: ${error.message || 'Failed to save booking. Please ensure you have run the database migrations.'}`);
+                    return;
+                }
             } catch (e) {
                 console.error('Error creating booking:', e);
+                setBookingError(`Error: ${e.message || 'Failed to save booking.'}`);
+                return;
             }
             await fetchDashboardData(techId);
         } else {
