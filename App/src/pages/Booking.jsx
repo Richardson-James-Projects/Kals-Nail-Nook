@@ -46,7 +46,7 @@ const Booking = () => {
             if (isSupabaseConfigured) {
                 try {
                     // Fetch services
-                    const { data: dbServices } = await supabase.from('services').select('*');
+                    const { data: dbServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
                     const loadedServices = dbServices || [];
                     setServices(loadedServices);
                     if (loadedServices.length > 0 && !formData.service) {
@@ -113,6 +113,7 @@ const Booking = () => {
                 }
             } else {
                 const loadedServices = JSON.parse(localStorage.getItem('services') || '[]');
+                loadedServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
                 setServices(loadedServices);
                 if (loadedServices.length > 0 && !formData.service) {
                     setFormData(prev => ({ ...prev, service: searchParams.get('service') || loadedServices[0].id }));

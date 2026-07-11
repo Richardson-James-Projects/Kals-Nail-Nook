@@ -9,7 +9,8 @@ export const initializeData = async () => {
             price: '$35',
             duration: '45 min',
             description: 'Nail shaping, cuticle care, hand massage, and polish of your choice.',
-            popular: true
+            popular: true,
+            sort_order: 0
         },
         {
             id: 'gel-manicure',
@@ -17,7 +18,8 @@ export const initializeData = async () => {
             price: '$50',
             duration: '60 min',
             description: 'Long-lasting gel polish with zero dry time and high shine finish.',
-            popular: true
+            popular: true,
+            sort_order: 1
         },
         {
             id: 'pedicure-spa',
@@ -25,7 +27,8 @@ export const initializeData = async () => {
             price: '$65',
             duration: '60 min',
             description: 'Relaxing foot soak, scrub, callus removal, massage, and polish.',
-            popular: false
+            popular: false,
+            sort_order: 2
         },
         {
             id: 'acrylic-full',
@@ -33,7 +36,8 @@ export const initializeData = async () => {
             price: '$75+',
             duration: '90 min',
             description: 'Extensions using high-quality acrylic powder for length and strength.',
-            popular: false
+            popular: false,
+            sort_order: 3
         },
         {
             id: 'nail-art',
@@ -41,7 +45,8 @@ export const initializeData = async () => {
             price: '$15+',
             duration: 'Add-on',
             description: 'Intricate designs, gems, or chrome powders added to any service.',
-            popular: false
+            popular: false,
+            sort_order: 4
         }
     ];
 

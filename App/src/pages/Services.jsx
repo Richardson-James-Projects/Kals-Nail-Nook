@@ -10,13 +10,14 @@ const Services = () => {
         const fetchServices = async () => {
             if (isSupabaseConfigured) {
                 try {
-                    const { data } = await supabase.from('services').select('*');
+                    const { data } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
                     setServices(data || []);
                 } catch (e) {
                     console.error('Error fetching services from Supabase:', e);
                 }
             } else {
                 const storedServices = JSON.parse(localStorage.getItem('services') || '[]');
+                storedServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
                 setServices(storedServices);
             }
         };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert } from 'lucide-react';
+import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert, ChevronUp, ChevronDown } from 'lucide-react';
 import { hashPassword } from '../utils/crypto';
 import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
@@ -130,7 +130,7 @@ const TechDashboard = () => {
                 }
 
                 // Fetch services
-                const { data: dbServices } = await supabase.from('services').select('*');
+                const { data: dbServices } = await supabase.from('services').select('*').order('sort_order', { ascending: true });
                 setServices(dbServices || []);
 
                 // Fetch users
@@ -168,6 +168,7 @@ const TechDashboard = () => {
             if (savedSchedule) setSchedule(savedSchedule);
 
             const lServices = JSON.parse(localStorage.getItem('services') || '[]');
+            lServices.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
             setServices(lServices);
 
             const allUsers = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
@@ -416,7 +417,8 @@ const TechDashboard = () => {
             duration: fd.get('durationUnit') === 'Add-on' ? 'Add-on' : `${fd.get('durationValue')} ${fd.get('durationUnit')}`,
             description: fd.get('description'),
             popular: fd.get('popular') === 'on',
-            images: servicePictures
+            images: servicePictures,
+            sort_order: editingService.id ? (editingService.sort_order !== undefined && editingService.sort_order !== null ? editingService.sort_order : services.length) : services.length
         };
 
         if (isSupabaseConfigured) {
@@ -436,6 +438,7 @@ const TechDashboard = () => {
             } else {
                  updated = [...services, newServiceObj];
             }
+            updated.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
             setServices(updated);
             localStorage.setItem('services', JSON.stringify(updated));
         }
@@ -460,6 +463,72 @@ const TechDashboard = () => {
                 setServices(updated);
                 localStorage.setItem('services', JSON.stringify(updated));
             }
+        }
+    };
+
+    const handleMoveService = async (serviceId, direction) => {
+        const index = services.findIndex(s => s.id === serviceId);
+        if (index === -1) return;
+
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= services.length) return;
+
+        const updatedServices = [...services];
+        
+        // Ensure all services have a valid sort_order value first (if some are null or 0)
+        updatedServices.forEach((s, idx) => {
+            if (s.sort_order === undefined || s.sort_order === null) {
+                s.sort_order = idx;
+            }
+        });
+
+        // Swap sort_order
+        const tempOrder = updatedServices[index].sort_order;
+        updatedServices[index].sort_order = updatedServices[targetIndex].sort_order;
+        updatedServices[targetIndex].sort_order = tempOrder;
+
+        // If they had the same sort_order, just assign indices
+        if (updatedServices[index].sort_order === updatedServices[targetIndex].sort_order) {
+            updatedServices[index].sort_order = targetIndex;
+            updatedServices[targetIndex].sort_order = index;
+        }
+
+        // Sort locally for instant UI response
+        updatedServices.sort((a, b) => a.sort_order - b.sort_order);
+        setServices(updatedServices);
+
+        if (isSupabaseConfigured) {
+            try {
+                // Upsert both swapped services
+                await supabase
+                    .from('services')
+                    .upsert([
+                        { 
+                            id: updatedServices[index].id, 
+                            name: updatedServices[index].name,
+                            price: updatedServices[index].price,
+                            duration: updatedServices[index].duration,
+                            description: updatedServices[index].description,
+                            popular: updatedServices[index].popular,
+                            images: updatedServices[index].images,
+                            sort_order: updatedServices[index].sort_order 
+                        },
+                        { 
+                            id: updatedServices[targetIndex].id, 
+                            name: updatedServices[targetIndex].name,
+                            price: updatedServices[targetIndex].price,
+                            duration: updatedServices[targetIndex].duration,
+                            description: updatedServices[targetIndex].description,
+                            popular: updatedServices[targetIndex].popular,
+                            images: updatedServices[targetIndex].images,
+                            sort_order: updatedServices[targetIndex].sort_order 
+                        }
+                    ]);
+            } catch (e) {
+                console.error('Error saving new service order in Supabase:', e);
+            }
+        } else {
+            localStorage.setItem('services', JSON.stringify(updatedServices));
         }
     };
 
@@ -992,7 +1061,7 @@ const TechDashboard = () => {
                         </div>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                            {services.map(s => (
+                            {services.map((s, index) => (
                                 <div key={s.id} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', position: 'relative' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{s.name}</h3>
@@ -1001,15 +1070,43 @@ const TechDashboard = () => {
                                     <p style={{ opacity: 0.7, fontSize: '0.85rem', marginBottom: '1rem' }}>{s.duration}</p>
                                     <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{s.description}</p>
                                     
-                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                        <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px' }}>
-                                            <Edit2 size={14} /> Edit
-                                        </button>
-                                        <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px' }}>
-                                            <Trash2 size={14} /> Delete
-                                        </button>
+                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                                <Edit2 size={14} /> Edit
+                                            </button>
+                                            <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                                <Trash2 size={14} /> Delete
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            <button 
+                                                onClick={() => handleMoveService(s.id, 'up')}
+                                                disabled={index === 0}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
+                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563', 
+                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer' 
+                                                }}
+                                                title="Move Up"
+                                            >
+                                                <ChevronUp size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleMoveService(s.id, 'down')}
+                                                disabled={index === services.length - 1}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
+                                                    backgroundColor: '#f3f4f6', color: index === services.length - 1 ? '#d1d5db' : '#4b5563', 
+                                                    borderRadius: '4px', border: 'none', cursor: index === services.length - 1 ? 'not-allowed' : 'pointer' 
+                                                }}
+                                                title="Move Down"
+                                            >
+                                                <ChevronDown size={14} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    {s.popular && <span style={{ position: 'absolute', top: '-10px', right: '10px', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bolf' }}>POPULAR</span>}
+                                    {s.popular && <span style={{ position: 'absolute', top: '-10px', right: '10px', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>POPULAR</span>}
                                 </div>
                             ))}
                         </div>
