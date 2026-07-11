@@ -27,10 +27,10 @@ const formatDisplayDate = (dateStr, options = undefined) => {
 
 const TechDashboard = () => {
     const { user } = useAuth();
-    
+
     const [techId, setTechId] = useState(null);
     const [appointments, setAppointments] = useState([]);
-    
+
     // Modals & Forms State
     const [selectedClientNote, setSelectedClientNote] = useState(null);
     const [editingService, setEditingService] = useState(null);
@@ -105,7 +105,7 @@ const TechDashboard = () => {
                 // Fetch bookings
                 const { data: dbBookings, error: errBookings } = await supabase.from('bookings').select('*');
                 if (errBookings) throw errBookings;
-                
+
                 const loadedBookings = (dbBookings || []).map(b => ({
                     id: b.id,
                     service: b.service,
@@ -138,7 +138,7 @@ const TechDashboard = () => {
                         .select('*')
                         .eq('tech_id', activeTechId);
                     if (errSchedules) throw errSchedules;
-                    
+
                     if (dbSchedules && dbSchedules.length > 0) {
                         // Map db rows back to schedule format sorted by day of week index
                         const daysIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -262,7 +262,7 @@ const TechDashboard = () => {
             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
             const updated = allBookings.map(b => b.id === apptId ? { ...b, status } : b);
             localStorage.setItem('bookings', JSON.stringify(updated));
-            
+
             const myBookings = updated.filter(b => (b.techId === techId || b.techId === 'any') && !b.techDismissed);
             myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
             setAppointments(myBookings);
@@ -285,13 +285,13 @@ const TechDashboard = () => {
             const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
             const updated = allBookings.map(b => b.id === apptId ? { ...b, techDismissed: true } : b);
             localStorage.setItem('bookings', JSON.stringify(updated));
-            
+
             const mappedBookings = updated.map(b => ({
                 ...b,
                 techDismissed: b.techDismissed || false
             }));
             setAllBookingsList(mappedBookings);
-            
+
             const myBookings = mappedBookings.filter(b => (b.techId === techId || b.techId === 'any') && !b.techDismissed);
             myBookings.sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
             setAppointments(myBookings);
@@ -408,7 +408,7 @@ const TechDashboard = () => {
     // --- BLOCKED DATES ACTIONS ---
     const handleAddBlockedDate = async () => {
         if (!newBlockedDate || blockedDates.includes(newBlockedDate)) return;
-        
+
         if (isSupabaseConfigured) {
             try {
                 const { error } = await supabase
@@ -499,7 +499,7 @@ const TechDashboard = () => {
     const handleSaveService = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        
+
         const newServiceObj = {
             id: editingService.id || `service-${Date.now()}`,
             name: fd.get('name'),
@@ -524,9 +524,9 @@ const TechDashboard = () => {
         } else {
             let updated;
             if (editingService.id) {
-                 updated = services.map(s => s.id === newServiceObj.id ? newServiceObj : s);
+                updated = services.map(s => s.id === newServiceObj.id ? newServiceObj : s);
             } else {
-                 updated = [...services, newServiceObj];
+                updated = [...services, newServiceObj];
             }
             updated.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
             setServices(updated);
@@ -564,7 +564,7 @@ const TechDashboard = () => {
         if (targetIndex < 0 || targetIndex >= services.length) return;
 
         const updatedServices = [...services];
-        
+
         // Ensure all services have a valid sort_order value first (if some are null or 0)
         updatedServices.forEach((s, idx) => {
             if (s.sort_order === undefined || s.sort_order === null) {
@@ -593,25 +593,25 @@ const TechDashboard = () => {
                 await supabase
                     .from('services')
                     .upsert([
-                        { 
-                            id: updatedServices[index].id, 
+                        {
+                            id: updatedServices[index].id,
                             name: updatedServices[index].name,
                             price: updatedServices[index].price,
                             duration: updatedServices[index].duration,
                             description: updatedServices[index].description,
                             popular: updatedServices[index].popular,
                             images: updatedServices[index].images,
-                            sort_order: updatedServices[index].sort_order 
+                            sort_order: updatedServices[index].sort_order
                         },
-                        { 
-                            id: updatedServices[targetIndex].id, 
+                        {
+                            id: updatedServices[targetIndex].id,
                             name: updatedServices[targetIndex].name,
                             price: updatedServices[targetIndex].price,
                             duration: updatedServices[targetIndex].duration,
                             description: updatedServices[targetIndex].description,
                             popular: updatedServices[targetIndex].popular,
                             images: updatedServices[targetIndex].images,
-                            sort_order: updatedServices[targetIndex].sort_order 
+                            sort_order: updatedServices[targetIndex].sort_order
                         }
                     ]);
             } catch (e) {
@@ -625,7 +625,7 @@ const TechDashboard = () => {
     const handleDeleteUser = async (userId) => {
         const targetUser = usersList.find(u => u.id === userId);
         if (!targetUser) return;
-        
+
         if (targetUser.email === user?.email) {
             alert("You cannot delete your own logged-in account!");
             return;
@@ -683,7 +683,7 @@ const TechDashboard = () => {
         e.preventDefault();
         setAddUserError('');
         const fd = new FormData(e.target);
-        
+
         const name = fd.get('name');
         const email = fd.get('email');
         const phone = fd.get('phone');
@@ -909,15 +909,15 @@ const TechDashboard = () => {
     };
 
     const getNoShowCount = (u) => {
-        return allBookingsList.filter(b => 
-            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) || 
+        return allBookingsList.filter(b =>
+            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) ||
             (b.phone && u.phone && cleanPhoneNumber(b.phone) === cleanPhoneNumber(u.phone))
         ).filter(b => b.status === 'No-Show').length;
     };
 
     const getCancelledCount = (u) => {
-        return allBookingsList.filter(b => 
-            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) || 
+        return allBookingsList.filter(b =>
+            (b.email && u.email && b.email.toLowerCase() === u.email.toLowerCase()) ||
             (b.phone && u.phone && cleanPhoneNumber(b.phone) === cleanPhoneNumber(u.phone))
         ).filter(b => b.status === 'Cancelled').length;
     };
@@ -930,7 +930,7 @@ const TechDashboard = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                
+
                 {/* 1. Appointment List */}
                 <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
                     <section>
@@ -938,16 +938,16 @@ const TechDashboard = () => {
                             <h2 style={{ fontSize: '1.25rem', margin: 0 }}>
                                 Appointment Schedule
                             </h2>
-                            <button 
+                            <button
                                 onClick={openBookingModal}
                                 style={{
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '0.5rem', 
-                                    backgroundColor: 'var(--color-primary)', 
-                                    color: 'var(--color-secondary)', 
-                                    padding: '0.5rem 1rem', 
-                                    borderRadius: '6px', 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    backgroundColor: 'var(--color-primary)',
+                                    color: 'var(--color-secondary)',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '6px',
                                     fontWeight: '600',
                                     border: 'none',
                                     cursor: 'pointer'
@@ -1003,24 +1003,24 @@ const TechDashboard = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <User size={16} style={{ opacity: 0.5 }} /> {appt.name}
                                         </div>
-                                         <div>
-                                             <strong>{appt.serviceName}</strong>
-                                             {appt.addons && appt.addons.length > 0 && (
-                                                 <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                                                     + {appt.addons.map(addon => addon.split(' (')[0]).join(', ')}
-                                                 </div>
-                                             )}
-                                         </div>
+                                        <div>
+                                            <strong>{appt.serviceName}</strong>
+                                            {appt.addons && appt.addons.length > 0 && (
+                                                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                                                    + {appt.addons.map(addon => addon.split(' (')[0]).join(', ')}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
                                             {appt.phone && appt.phone !== 'N/A' && (
-                                                <>{formatPhoneNumber(appt.phone)}<br/></>
+                                                <>{formatPhoneNumber(appt.phone)}<br /></>
                                             )}
                                             {appt.email && appt.email !== 'guest@example.com' && appt.email !== 'N/A' ? appt.email : (!appt.phone || appt.phone === 'N/A' ? 'No contact' : '')}
                                         </div>
-                                        
+
                                         {/* Status Dropdown */}
                                         <div>
-                                            <select 
+                                            <select
                                                 value={appt.status || 'Pending'}
                                                 onChange={(e) => handleStatusChange(appt.id, e.target.value)}
                                                 style={{
@@ -1183,12 +1183,12 @@ const TechDashboard = () => {
                                 <Ban size={20} color="#ef4444" /> Block Dates Off
                             </h2>
                             <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>Prevent bookings on specific calendar dates.</p>
-                            
+
                             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     value={newBlockedDate}
-                                    onChange={(e)=>setNewBlockedDate(e.target.value)}
+                                    onChange={(e) => setNewBlockedDate(e.target.value)}
                                     style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
                                 />
                                 <button onClick={handleAddBlockedDate} style={{
@@ -1224,13 +1224,13 @@ const TechDashboard = () => {
                         {/* Nail Treatments Menu Section */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                             <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: '600' }}>Nail Treatments Menu</h3>
-                            <button onClick={()=> openServiceModal(null, false)} style={{
+                            <button onClick={() => openServiceModal(null, false)} style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer'
-                             }}>
+                            }}>
                                 <Plus size={16} /> Add Service
                             </button>
                         </div>
-                        
+
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                             {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map((s, index) => (
                                 <div key={s.id} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', position: 'relative' }}>
@@ -1240,36 +1240,36 @@ const TechDashboard = () => {
                                     </div>
                                     <p style={{ opacity: 0.7, fontSize: '0.85rem', marginBottom: '1rem' }}>{s.duration}</p>
                                     <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{s.description}</p>
-                                    
+
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                            <button onClick={() => openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
                                                 <Edit2 size={14} /> Edit
                                             </button>
-                                            <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                            <button onClick={() => handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
                                                 <Trash2 size={14} /> Delete
                                             </button>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                            <button 
+                                            <button
                                                 onClick={() => handleMoveService(s.id, 'up')}
                                                 disabled={index === 0}
-                                                style={{ 
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
-                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563', 
-                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem',
+                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563',
+                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer'
                                                 }}
                                                 title="Move Left"
                                             >
                                                 <ChevronLeft size={14} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleMoveService(s.id, 'down')}
                                                 disabled={index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1}
-                                                style={{ 
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
-                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? '#d1d5db' : '#4b5563', 
-                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem',
+                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? '#d1d5db' : '#4b5563',
+                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() !== 'add-on').length - 1 ? 'not-allowed' : 'pointer'
                                                 }}
                                                 title="Move Right"
                                             >
@@ -1285,13 +1285,13 @@ const TechDashboard = () => {
                         {/* Booking Add-ons Section */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                             <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: '600' }}>Booking Add-ons</h3>
-                            <button onClick={()=> openServiceModal(null, true)} style={{
+                            <button onClick={() => openServiceModal(null, true)} style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer'
-                             }}>
+                            }}>
                                 <Plus size={16} /> Add Add-on
                             </button>
                         </div>
-                        
+
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
                             {services.filter(s => (s.duration || '').toLowerCase() === 'add-on').map((s, index) => (
                                 <div key={s.id} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', position: 'relative' }}>
@@ -1301,36 +1301,36 @@ const TechDashboard = () => {
                                     </div>
                                     <p style={{ opacity: 0.7, fontSize: '0.85rem', marginBottom: '1rem' }}>Type: {s.duration}</p>
                                     <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{s.description}</p>
-                                    
+
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                            <button onClick={() => openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
                                                 <Edit2 size={14} /> Edit
                                             </button>
-                                            <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
+                                            <button onClick={() => handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.6rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>
                                                 <Trash2 size={14} /> Delete
                                             </button>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                            <button 
+                                            <button
                                                 onClick={() => handleMoveService(s.id, 'up')}
                                                 disabled={index === 0}
-                                                style={{ 
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
-                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563', 
-                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem',
+                                                    backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563',
+                                                    borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer'
                                                 }}
                                                 title="Move Left"
                                             >
                                                 <ChevronLeft size={14} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleMoveService(s.id, 'down')}
                                                 disabled={index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1}
-                                                style={{ 
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem', 
-                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? '#d1d5db' : '#4b5563', 
-                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem',
+                                                    backgroundColor: '#f3f4f6', color: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? '#d1d5db' : '#4b5563',
+                                                    borderRadius: '4px', border: 'none', cursor: index === services.filter(ser => (ser.duration || '').toLowerCase() === 'add-on').length - 1 ? 'not-allowed' : 'pointer'
                                                 }}
                                                 title="Move Right"
                                             >
@@ -1353,10 +1353,10 @@ const TechDashboard = () => {
                         padding: '2rem',
                         boxShadow: 'var(--shadow-sm)'
                     }}>
-                        <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center', 
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
                             marginBottom: '1.5rem',
                             flexWrap: 'wrap',
                             gap: '1rem'
@@ -1369,7 +1369,7 @@ const TechDashboard = () => {
                                     View registered customer and technician accounts, or manage them as needed.
                                 </p>
                             </div>
-                            
+
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', maxWidth: '500px', marginLeft: 'auto' }}>
                                 <input
                                     type="text"
@@ -1384,16 +1384,16 @@ const TechDashboard = () => {
                                         fontSize: '0.9rem'
                                     }}
                                 />
-                                <button 
+                                <button
                                     onClick={() => { setIsAddingUser(true); setAddUserError(''); setAddUserPhone(''); }}
                                     style={{
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '0.5rem', 
-                                        backgroundColor: 'var(--color-primary)', 
-                                        color: 'var(--color-secondary)', 
-                                        padding: '0.5rem 1rem', 
-                                        borderRadius: '6px', 
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        backgroundColor: 'var(--color-primary)',
+                                        color: 'var(--color-secondary)',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '6px',
                                         fontWeight: '600',
                                         border: 'none',
                                         cursor: 'pointer'
@@ -1426,13 +1426,13 @@ const TechDashboard = () => {
                                 </thead>
                                 <tbody>
                                     {usersList
-                                        .filter(u => 
+                                        .filter(u =>
                                             (u.name && u.name.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
                                             (u.email && u.email.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
                                             (u.phone && u.phone.includes(searchUserQuery))
                                         )
                                         .map((u) => (
-                                            <tr key={u.id} style={{ 
+                                            <tr key={u.id} style={{
                                                 borderBottom: '1px solid #eee',
                                                 backgroundColor: u.email && u.email === user?.email ? '#f0f9ff' : 'transparent',
                                                 transition: 'background-color 0.2s'
@@ -1443,9 +1443,9 @@ const TechDashboard = () => {
                                                 <td style={{ padding: '1rem', color: '#555' }}>{u.email && u.email !== 'guest@example.com' && u.email !== 'N/A' ? u.email : ''}</td>
                                                 <td style={{ padding: '1rem', color: '#555' }}>{u.phone && u.phone !== 'N/A' ? formatPhoneNumber(u.phone) : ''}</td>
                                                 <td style={{ padding: '1rem' }}>
-                                                    <span style={{ 
-                                                        fontSize: '0.8rem', 
-                                                        padding: '0.2rem 0.5rem', 
+                                                    <span style={{
+                                                        fontSize: '0.8rem',
+                                                        padding: '0.2rem 0.5rem',
                                                         borderRadius: '12px',
                                                         fontWeight: '600',
                                                         backgroundColor: u.role === 'owner' ? '#fef3c7' : (u.role === 'tech' ? '#fee2e2' : '#e0e7ff'),
@@ -1505,7 +1505,7 @@ const TechDashboard = () => {
                                                             }
 
                                                             return (
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleDeleteUser(u.id)}
                                                                     disabled={isDisabled}
                                                                     style={{
@@ -1527,17 +1527,17 @@ const TechDashboard = () => {
                                                 </td>
                                             </tr>
                                         ))}
-                                    {usersList.filter(u => 
+                                    {usersList.filter(u =>
                                         (u.name && u.name.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
                                         (u.email && u.email.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
                                         (u.phone && u.phone.includes(searchUserQuery))
                                     ).length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
-                                                No matching accounts found.
-                                            </td>
-                                        </tr>
-                                    )}
+                                            <tr>
+                                                <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
+                                                    No matching accounts found.
+                                                </td>
+                                            </tr>
+                                        )}
                                 </tbody>
                             </table>
                         </div>
@@ -1566,7 +1566,7 @@ const TechDashboard = () => {
                         <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#666' }}>
                             Client: <strong>{selectedClientNote.name}</strong> ({selectedClientNote.email})
                         </p>
-                        
+
                         <div style={{ display: 'grid', gap: '1.5rem', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
                             {/* Section 1: Customer's Appointment Notes — only shown from the schedule row */}
                             {selectedClientNote.customerText !== null && (
@@ -1586,18 +1586,18 @@ const TechDashboard = () => {
                                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                                                 {selectedClientNote.customerPictures.map((pic, idx) => (
                                                     <a key={idx} href={pic} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
-                                                        <img 
-                                                            src={pic} 
-                                                            alt="Client attachment" 
-                                                            style={{ 
-                                                                width: '70px', 
-                                                                height: '70px', 
-                                                                objectFit: 'cover', 
-                                                                borderRadius: '6px', 
+                                                        <img
+                                                            src={pic}
+                                                            alt="Client attachment"
+                                                            style={{
+                                                                width: '70px',
+                                                                height: '70px',
+                                                                objectFit: 'cover',
+                                                                borderRadius: '6px',
                                                                 border: '1px solid #ddd',
                                                                 cursor: 'pointer',
                                                                 transition: 'transform 0.2s'
-                                                            }} 
+                                                            }}
                                                             onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                                                             onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                                         />
@@ -1617,9 +1617,9 @@ const TechDashboard = () => {
                                 <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>
                                     Customers cannot see these notes. Keep track of polishes used, style history, shape preference, or allergies.
                                 </p>
-                                <textarea 
+                                <textarea
                                     value={selectedClientNote.internalText}
-                                    onChange={(e) => setSelectedClientNote({...selectedClientNote, internalText: e.target.value})}
+                                    onChange={(e) => setSelectedClientNote({ ...selectedClientNote, internalText: e.target.value })}
                                     style={{ width: '100%', minHeight: '120px', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit', resize: 'vertical' }}
                                     placeholder="Add allergy alerts, size metrics, specific colors used, etc."
                                 />
@@ -1652,15 +1652,15 @@ const TechDashboard = () => {
                         </button>
 
                         <h3 style={{ marginBottom: '1.5rem' }}>{editingService.id ? 'Edit Service' : 'Add New Service'}</h3>
-                        
+
                         <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service Name</label>
                                 <input type="text" name="name" defaultValue={editingService.name} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.2rem 0' }}>
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     id="serviceIsAddonCheckbox"
                                     checked={isServiceAddOn}
                                     onChange={(e) => setIsServiceAddOn(e.target.checked)}
@@ -1690,7 +1690,7 @@ const TechDashboard = () => {
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Duration</label>
                                     {isServiceAddOn ? (
-                                        <div style={{ 
+                                        <div style={{
                                             display: 'flex', alignItems: 'center', backgroundColor: '#f3f4f6', color: '#4b5563',
                                             border: '1px solid #ddd', borderRadius: '6px', height: '2.5rem', padding: '0 0.75rem',
                                             fontSize: '0.9rem', fontWeight: '600', boxSizing: 'border-box'
@@ -1702,7 +1702,7 @@ const TechDashboard = () => {
                                             const dur = editingService.duration || '';
                                             const parts = dur.split(' ');
                                             const durNum = parts[0] || '60';
-                                            const durUnit = ['min','hr'].includes(parts[1]) ? parts[1] : 'min';
+                                            const durUnit = ['min', 'hr'].includes(parts[1]) ? parts[1] : 'min';
                                             return (
                                                 <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden', height: '2.5rem', boxSizing: 'border-box' }}>
                                                     <input
@@ -1774,7 +1774,7 @@ const TechDashboard = () => {
                                 <span style={{ fontSize: '0.9rem' }}>Mark as "Most Popular"</span>
                             </label>
                         </div>
-                        
+
                         <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', borderRadius: '6px', fontWeight: 'bold' }}>
                             Save Service
                         </button>
@@ -1795,7 +1795,7 @@ const TechDashboard = () => {
                         </button>
 
                         <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}>Create User Account</h3>
-                        
+
                         {addUserError && (
                             <div style={{
                                 backgroundColor: '#fee2e2',
@@ -1820,13 +1820,13 @@ const TechDashboard = () => {
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone Number</label>
-                                <input 
-                                    type="tel" 
-                                    name="phone" 
-                                    value={addUserPhone} 
-                                    onChange={(e) => setAddUserPhone(formatPhoneNumber(e.target.value))} 
-                                    placeholder="555-0100" 
-                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={addUserPhone}
+                                    onChange={(e) => setAddUserPhone(formatPhoneNumber(e.target.value))}
+                                    placeholder="555-0100"
+                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
                                 />
                             </div>
                             <div>
@@ -1841,7 +1841,7 @@ const TechDashboard = () => {
                                 <input type="password" name="password" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
                             </div>
                         </div>
-                        
+
                         <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
                             Create Account
                         </button>
@@ -1862,7 +1862,7 @@ const TechDashboard = () => {
                         </button>
 
                         <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}>Book Appointment (Staff Form)</h3>
-                        
+
                         {bookingError && (
                             <div style={{
                                 backgroundColor: '#fee2e2',
@@ -1882,20 +1882,20 @@ const TechDashboard = () => {
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Client Type</label>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                        <input 
-                                            type="radio" 
-                                            name="clientType" 
-                                            checked={bookingClientType === 'guest'} 
-                                            onChange={() => setBookingClientType('guest')} 
+                                        <input
+                                            type="radio"
+                                            name="clientType"
+                                            checked={bookingClientType === 'guest'}
+                                            onChange={() => setBookingClientType('guest')}
                                         />
                                         <span style={{ fontSize: '0.9rem' }}>Walk-in / Guest</span>
                                     </label>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                        <input 
-                                            type="radio" 
-                                            name="clientType" 
-                                            checked={bookingClientType === 'customer'} 
-                                            onChange={() => setBookingClientType('customer')} 
+                                        <input
+                                            type="radio"
+                                            name="clientType"
+                                            checked={bookingClientType === 'customer'}
+                                            onChange={() => setBookingClientType('customer')}
                                         />
                                         <span style={{ fontSize: '0.9rem' }}>Registered Account</span>
                                     </label>
@@ -1906,10 +1906,10 @@ const TechDashboard = () => {
                             {bookingClientType === 'customer' && (
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Registered Account</label>
-                                    <select 
-                                        value={selectedClientUser} 
-                                        onChange={(e) => setSelectedClientUser(e.target.value)} 
-                                        required 
+                                    <select
+                                        value={selectedClientUser}
+                                        onChange={(e) => setSelectedClientUser(e.target.value)}
+                                        required
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
                                         <option value="" disabled>Choose a customer...</option>
@@ -1931,33 +1931,33 @@ const TechDashboard = () => {
                                 <div style={{ display: 'grid', gap: '1rem' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Client Name</label>
-                                        <input 
-                                            type="text" 
-                                            required 
+                                        <input
+                                            type="text"
+                                            required
                                             value={bookingFormData.guestName}
-                                            onChange={(e) => setBookingFormData({...bookingFormData, guestName: e.target.value})}
-                                            style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                            onChange={(e) => setBookingFormData({ ...bookingFormData, guestName: e.target.value })}
+                                            style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
                                         />
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone</label>
-                                            <input 
-                                                type="tel" 
+                                            <input
+                                                type="tel"
                                                 value={bookingFormData.guestPhone}
-                                                onChange={(e) => setBookingFormData({...bookingFormData, guestPhone: formatPhoneNumber(e.target.value)})}
-                                                placeholder="555-0100" 
-                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                                onChange={(e) => setBookingFormData({ ...bookingFormData, guestPhone: formatPhoneNumber(e.target.value) })}
+                                                placeholder="555-0100"
+                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
                                             />
                                         </div>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Email</label>
-                                            <input 
-                                                type="email" 
+                                            <input
+                                                type="email"
                                                 value={bookingFormData.guestEmail}
-                                                onChange={(e) => setBookingFormData({...bookingFormData, guestEmail: e.target.value})}
-                                                placeholder="guest@example.com" 
-                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                                onChange={(e) => setBookingFormData({ ...bookingFormData, guestEmail: e.target.value })}
+                                                placeholder="guest@example.com"
+                                                style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }}
                                             />
                                         </div>
                                     </div>
@@ -1970,10 +1970,10 @@ const TechDashboard = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service</label>
-                                    <select 
-                                        value={bookingFormData.service} 
-                                        onChange={(e) => setBookingFormData({...bookingFormData, service: e.target.value})} 
-                                        required 
+                                    <select
+                                        value={bookingFormData.service}
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, service: e.target.value })}
+                                        required
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
                                         {services.filter(s => (s.duration || '').toLowerCase() !== 'add-on').map(s => (
@@ -1983,10 +1983,10 @@ const TechDashboard = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Technician</label>
-                                    <select 
-                                        value={bookingFormData.techId} 
-                                        onChange={(e) => setBookingFormData({...bookingFormData, techId: e.target.value})} 
-                                        required 
+                                    <select
+                                        value={bookingFormData.techId}
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, techId: e.target.value })}
+                                        required
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
                                         {technicians.map(t => (
@@ -2015,8 +2015,8 @@ const TechDashboard = () => {
                                                 fontSize: '0.8rem',
                                                 transition: 'all 0.2s'
                                             }}>
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     checked={isChecked}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
@@ -2038,39 +2038,39 @@ const TechDashboard = () => {
                             </div>
 
                             {/* Date and Time */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Date</label>
-                                    <input 
-                                        type="date" 
-                                        required 
+                                    <input
+                                        type="date"
+                                        required
                                         value={bookingFormData.date}
-                                        onChange={(e) => setBookingFormData({...bookingFormData, date: e.target.value})}
-                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, date: e.target.value })}
+                                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', boxSizing: 'border-box' }}
                                     />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                    <div style={{ display: 'flex', gap: '0.4rem', width: '100%' }}>
                                         {(() => {
                                             const timeParts = (bookingFormData.time || '09:00 AM').split(' ');
                                             const timeVal = timeParts[0] || '09:00';
                                             const amPmVal = timeParts[1] || 'AM';
                                             return (
                                                 <>
-                                                    <input 
+                                                    <input
                                                         type="text"
                                                         list="techTimeSlots"
-                                                        value={timeVal} 
-                                                        onChange={(e) => setBookingFormData({...bookingFormData, time: `${e.target.value} ${amPmVal}`})} 
-                                                        required 
+                                                        value={timeVal}
+                                                        onChange={(e) => setBookingFormData({ ...bookingFormData, time: `${e.target.value} ${amPmVal}` })}
+                                                        required
                                                         placeholder="10:00"
-                                                        style={{ flex: 2, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
+                                                        style={{ flex: 1, minWidth: 0, padding: '0.6rem 0.4rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
                                                     />
                                                     <select
                                                         value={amPmVal}
-                                                        onChange={(e) => setBookingFormData({...bookingFormData, time: `${timeVal} ${e.target.value}`})}
-                                                        style={{ flex: 1, padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}
+                                                        onChange={(e) => setBookingFormData({ ...bookingFormData, time: `${timeVal} ${e.target.value}` })}
+                                                        style={{ width: '65px', flexShrink: 0, padding: '0.6rem 0.2rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}
                                                     >
                                                         <option value="AM">AM</option>
                                                         <option value="PM">PM</option>
@@ -2087,7 +2087,7 @@ const TechDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
                             Book Appointment
                         </button>
