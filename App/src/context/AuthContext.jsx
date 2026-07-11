@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { hashPassword } from '../utils/crypto';
-import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured, cleanPhoneNumber } from '../utils/supabaseClient';
 
 const AuthContext = createContext(null);
 
@@ -17,35 +17,40 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = async (email, password, role) => {
+    const login = async (emailOrPhone, password, role) => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
         if (isSupabaseConfigured) {
-            const { data: foundUser, error } = await supabase
-                .from('nail_nook_users')
-                .select('*')
-                .eq('email', email.toLowerCase())
-                .single();
+            const isEmailInput = emailOrPhone.includes('@');
+            let query = supabase.from('nail_nook_users').select('*');
+            
+            if (isEmailInput) {
+                query = query.eq('email', emailOrPhone.toLowerCase());
+            } else {
+                query = query.eq('phone', cleanPhoneNumber(emailOrPhone));
+            }
+
+            const { data: foundUser, error } = await query.maybeSingle();
 
             if (error || !foundUser) {
-                throw new Error('Invalid email or password.');
+                throw new Error('Invalid email, phone number, or password.');
             }
 
             // Role checks
             if (role === 'tech') {
                 if (foundUser.role !== 'tech' && foundUser.role !== 'owner') {
-                    throw new Error('Invalid email or password.');
+                    throw new Error('Invalid email, phone number, or password.');
                 }
             } else {
                 if (foundUser.role !== role) {
-                    throw new Error('Invalid email or password.');
+                    throw new Error('Invalid email, phone number, or password.');
                 }
             }
 
             const hashedPassword = await hashPassword(password);
             if (foundUser.password_hash !== hashedPassword) {
-                throw new Error('Invalid email or password.');
+                throw new Error('Invalid email, phone number, or password.');
             }
 
             // Convert to session user format
@@ -63,21 +68,27 @@ export const AuthProvider = ({ children }) => {
             return sessionUser;
         } else {
             const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
+            const isEmailInput = emailOrPhone.includes('@');
+            const cleanPhone = cleanPhoneNumber(emailOrPhone);
+
             const foundUser = users.find(u => {
-                const emailMatch = u.email.toLowerCase() === email.toLowerCase();
+                const identifierMatch = isEmailInput
+                    ? (u.email && u.email.toLowerCase() === emailOrPhone.toLowerCase())
+                    : (u.phone && cleanPhoneNumber(u.phone) === cleanPhone);
+
                 if (role === 'tech') {
-                    return emailMatch && (u.role === 'tech' || u.role === 'owner');
+                    return identifierMatch && (u.role === 'tech' || u.role === 'owner');
                 }
-                return emailMatch && u.role === role;
+                return identifierMatch && u.role === role;
             });
 
             if (!foundUser) {
-                throw new Error('Invalid email or password.');
+                throw new Error('Invalid email, phone number, or password.');
             }
 
             const hashedPassword = await hashPassword(password);
             if (foundUser.passwordHash !== hashedPassword) {
-                throw new Error('Invalid email or password.');
+                throw new Error('Invalid email, phone number, or password.');
             }
 
             const { passwordHash, ...sessionUser } = foundUser;
@@ -91,24 +102,33 @@ export const AuthProvider = ({ children }) => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        if (!email && !phone) {
+            throw new Error('An email address or phone number is required to register.');
+        }
+
+        const cleanPhone = cleanPhoneNumber(phone);
+
         if (isSupabaseConfigured) {
-            // Check if email exists
-            const { data: existingUser } = await supabase
+            // Check if user already exists by email or phone
+            const orConditions = [];
+            if (email) orConditions.push(`email.eq."${email.toLowerCase()}"`);
+            if (cleanPhone) orConditions.push(`phone.eq."${cleanPhone}"`);
+
+            const { data: existingUsers } = await supabase
                 .from('nail_nook_users')
                 .select('id')
-                .eq('email', email.toLowerCase())
-                .maybeSingle();
+                .or(orConditions.join(','));
 
-            if (existingUser) {
-                throw new Error('An account with this email already exists.');
+            if (existingUsers && existingUsers.length > 0) {
+                throw new Error('An account with this email or phone number already exists.');
             }
 
             const passwordHash = await hashPassword(password);
             const newUser = {
                 id: `user-${Date.now()}`,
                 name,
-                email: email.toLowerCase(),
-                phone,
+                email: email ? email.toLowerCase() : null,
+                phone: cleanPhone || null,
                 password_hash: passwordHash,
                 role: 'customer'
             };
@@ -134,18 +154,20 @@ export const AuthProvider = ({ children }) => {
             return sessionUser;
         } else {
             const users = JSON.parse(localStorage.getItem('nail_nook_users') || '[]');
-            const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+            
+            const emailExists = email && users.some(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+            const phoneExists = cleanPhone && users.some(u => u.phone && cleanPhoneNumber(u.phone) === cleanPhone);
 
-            if (emailExists) {
-                throw new Error('An account with this email already exists.');
+            if (emailExists || phoneExists) {
+                throw new Error('An account with this email or phone number already exists.');
             }
 
             const passwordHash = await hashPassword(password);
             const newUser = {
                 id: `user-${Date.now()}`,
                 name,
-                email,
-                phone,
+                email: email ? email.toLowerCase() : null,
+                phone: cleanPhone || null,
                 passwordHash,
                 role: 'customer'
             };

@@ -14,3 +14,20 @@ export const supabase = isSupabaseConfigured
 if (!isSupabaseConfigured) {
     console.warn('Supabase is not configured. Falling back to localStorage database mode.');
 }
+
+export const cleanPhoneNumber = (val) => {
+    if (!val) return '';
+    return val.replace(/[^\d]/g, '');
+};
+
+export const formatPhoneNumber = (val) => {
+    if (!val) return '';
+    const cleaned = val.replace(/[^\d]/g, '');
+    if (cleaned.length > 6) {
+        return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+    if (cleaned.length > 3) {
+        return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+    }
+    return cleaned;
+};

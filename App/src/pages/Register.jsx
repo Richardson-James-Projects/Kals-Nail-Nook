@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, Phone } from 'lucide-react';
+import { formatPhoneNumber } from '../utils/supabaseClient';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -24,6 +25,10 @@ const Register = () => {
             return setError('Passwords do not match');
         }
 
+        if (!formData.email && !formData.phone) {
+            return setError('Please provide either an email address or a phone number.');
+        }
+
         setIsLoading(true);
 
         try {
@@ -37,7 +42,11 @@ const Register = () => {
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let value = e.target.value;
+        if (e.target.name === 'phone') {
+            value = formatPhoneNumber(value);
+        }
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     return (
@@ -98,7 +107,6 @@ const Register = () => {
                                 <input
                                     name="email"
                                     type="email"
-                                    required
                                     value={formData.email}
                                     onChange={handleChange}
                                     style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '8px', border: '1px solid #ddd' }}
@@ -113,7 +121,6 @@ const Register = () => {
                                 <input
                                     name="phone"
                                     type="tel"
-                                    required
                                     value={formData.phone}
                                     onChange={handleChange}
                                     style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '8px', border: '1px solid #ddd' }}

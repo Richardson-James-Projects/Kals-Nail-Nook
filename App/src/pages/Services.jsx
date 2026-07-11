@@ -95,12 +95,25 @@ const Services = () => {
                             {service.description}
                         </p>
 
-                        {/* Gallery Placeholder */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                            <div style={{ aspectRatio: '1/1', backgroundColor: '#e2e8f0', borderRadius: '8px' }}></div>
-                            <div style={{ aspectRatio: '1/1', backgroundColor: '#e2e8f0', borderRadius: '8px' }}></div>
-                            <div style={{ aspectRatio: '1/1', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#64748b', fontWeight: '500', border: '1px dashed #cbd5e1' }}>+ More</div>
-                        </div>
+                        {/* Gallery of Uploaded Images */}
+                        {service.images && service.images.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                                {service.images.slice(0, 3).map((img, idx) => (
+                                    <div key={idx} style={{ aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f5f5' }}>
+                                        {idx === 2 && service.images.length > 3 ? (
+                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: '#fff', fontWeight: '600' }}>
+                                                    +{service.images.length - 2} More
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <Link
                             to={`/book?service=${service.id}`}

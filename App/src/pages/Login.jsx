@@ -241,11 +241,11 @@ const Login = () => {
                     )}
 
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Email</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Email or Phone Number</label>
                         <div style={{ position: 'relative' }}>
                             <User size={18} style={{ position: 'absolute', left: '12px', top: '12px', opacity: 0.4 }} />
                             <input
-                                type="email"
+                                type="text"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -255,7 +255,7 @@ const Login = () => {
                                     borderRadius: '8px',
                                     border: '1px solid #ddd'
                                 }}
-                                placeholder="you@example.com"
+                                placeholder="you@example.com or 123-456-7890"
                             />
                         </div>
                     </div>

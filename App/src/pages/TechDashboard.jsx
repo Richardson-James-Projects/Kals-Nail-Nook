@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert } from 'lucide-react';
 import { hashPassword } from '../utils/crypto';
-import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -22,6 +22,18 @@ const TechDashboard = () => {
     // Modals & Forms State
     const [selectedClientNote, setSelectedClientNote] = useState(null);
     const [editingService, setEditingService] = useState(null);
+    const [servicePictures, setServicePictures] = useState([]);
+    const [isUploadingServicePhotos, setIsUploadingServicePhotos] = useState(false);
+
+    const openServiceModal = (service = null) => {
+        if (service) {
+            setEditingService(service);
+            setServicePictures(service.images || []);
+        } else {
+            setEditingService({});
+            setServicePictures([]);
+        }
+    };
 
     // Data State
     const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
@@ -36,6 +48,7 @@ const TechDashboard = () => {
     const [searchUserQuery, setSearchUserQuery] = useState('');
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [addUserError, setAddUserError] = useState('');
+    const [addUserPhone, setAddUserPhone] = useState('');
 
     // Booking appointment state
     const [technicians, setTechnicians] = useState([]);
@@ -343,6 +356,55 @@ const TechDashboard = () => {
     };
 
     // --- SERVICES ACTIONS ---
+    const compressServiceImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600;
+                    const MAX_HEIGHT = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+        });
+    };
+
+    const handleServicePhotoUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        setIsUploadingServicePhotos(true);
+
+        const promises = files.map(file => compressServiceImage(file));
+        const compressedBase64s = await Promise.all(promises);
+
+        setServicePictures(prev => [...prev, ...compressedBase64s]);
+        setIsUploadingServicePhotos(false);
+        e.target.value = '';
+    };
+
     const handleSaveService = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
@@ -353,7 +415,8 @@ const TechDashboard = () => {
             price: '$' + fd.get('price').replace(/^\$+/, ''),
             duration: fd.get('durationUnit') === 'Add-on' ? 'Add-on' : `${fd.get('durationValue')} ${fd.get('durationUnit')}`,
             description: fd.get('description'),
-            popular: fd.get('popular') === 'on'
+            popular: fd.get('popular') === 'on',
+            images: servicePictures
         };
 
         if (isSupabaseConfigured) {
@@ -468,8 +531,20 @@ const TechDashboard = () => {
         const role = fd.get('role');
         const password = fd.get('password');
 
-        if (usersList.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        const cleanPhone = cleanPhoneNumber(phone);
+
+        if (!email && !cleanPhone) {
+            setAddUserError('Please provide either an email address or a phone number.');
+            return;
+        }
+
+        if (email && usersList.some(u => u.email && u.email.toLowerCase() === email.toLowerCase())) {
             setAddUserError('An account with this email already exists.');
+            return;
+        }
+
+        if (cleanPhone && usersList.some(u => u.phone && cleanPhoneNumber(u.phone) === cleanPhone)) {
+            setAddUserError('An account with this phone number already exists.');
             return;
         }
 
@@ -478,8 +553,8 @@ const TechDashboard = () => {
             const newUser = {
                 id: role === 'tech' ? `tech-${Date.now()}` : `user-${Date.now()}`,
                 name,
-                email: email.toLowerCase(),
-                phone,
+                email: email ? email.toLowerCase() : null,
+                phone: cleanPhone || null,
                 passwordHash,
                 role,
                 requiresPasswordReset: true
@@ -726,7 +801,7 @@ const TechDashboard = () => {
                                             <User size={16} style={{ opacity: 0.5 }} /> {appt.name}
                                         </div>
                                         <div>{appt.serviceName}</div>
-                                        <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{appt.phone}<br/>{appt.email}</div>
+                                        <div style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{formatPhoneNumber(appt.phone) || 'N/A'}<br/>{appt.email || 'N/A'}</div>
                                         
                                         {/* Status Dropdown */}
                                         <div>
@@ -909,9 +984,9 @@ const TechDashboard = () => {
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Menu & Services Management</h2>
-                            <button onClick={()=> setEditingService({})} style={{
+                            <button onClick={()=> openServiceModal()} style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600'
-                            }}>
+                             }}>
                                 <Plus size={16} /> Add Service
                             </button>
                         </div>
@@ -927,7 +1002,7 @@ const TechDashboard = () => {
                                     <p style={{ opacity: 0.8, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{s.description}</p>
                                     
                                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                        <button onClick={()=> setEditingService(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px' }}>
+                                        <button onClick={()=> openServiceModal(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px' }}>
                                             <Edit2 size={14} /> Edit
                                         </button>
                                         <button onClick={()=> handleDeleteService(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px' }}>
@@ -981,7 +1056,7 @@ const TechDashboard = () => {
                                     }}
                                 />
                                 <button 
-                                    onClick={() => { setIsAddingUser(true); setAddUserError(''); }}
+                                    onClick={() => { setIsAddingUser(true); setAddUserError(''); setAddUserPhone(''); }}
                                     style={{
                                         display: 'flex', 
                                         alignItems: 'center', 
@@ -1021,20 +1096,21 @@ const TechDashboard = () => {
                                 <tbody>
                                     {usersList
                                         .filter(u => 
-                                            u.name.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
-                                            u.email.toLowerCase().includes(searchUserQuery.toLowerCase())
+                                            (u.name && u.name.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
+                                            (u.email && u.email.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
+                                            (u.phone && u.phone.includes(searchUserQuery))
                                         )
                                         .map((u) => (
                                             <tr key={u.id} style={{ 
                                                 borderBottom: '1px solid #eee',
-                                                backgroundColor: u.email === user?.email ? '#f0f9ff' : 'transparent',
+                                                backgroundColor: u.email && u.email === user?.email ? '#f0f9ff' : 'transparent',
                                                 transition: 'background-color 0.2s'
                                             }}>
                                                 <td style={{ padding: '1rem', fontWeight: '500' }}>
-                                                    {u.name} {u.email === user?.email && <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem' }}>You</span>}
+                                                    {u.name} {u.email && u.email === user?.email && <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-secondary)', padding: '0.1rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem' }}>You</span>}
                                                 </td>
-                                                <td style={{ padding: '1rem', color: '#555' }}>{u.email}</td>
-                                                <td style={{ padding: '1rem', color: '#555' }}>{u.phone || 'N/A'}</td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{u.email || 'N/A'}</td>
+                                                <td style={{ padding: '1rem', color: '#555' }}>{formatPhoneNumber(u.phone) || 'N/A'}</td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <span style={{ 
                                                         fontSize: '0.8rem', 
@@ -1115,8 +1191,9 @@ const TechDashboard = () => {
                                             </tr>
                                         ))}
                                     {usersList.filter(u => 
-                                        u.name.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
-                                        u.email.toLowerCase().includes(searchUserQuery.toLowerCase())
+                                        (u.name && u.name.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
+                                        (u.email && u.email.toLowerCase().includes(searchUserQuery.toLowerCase())) ||
+                                        (u.phone && u.phone.includes(searchUserQuery))
                                     ).length === 0 && (
                                         <tr>
                                             <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
@@ -1293,9 +1370,46 @@ const TechDashboard = () => {
                                     })()}
                                 </div>
                             </div>
+
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Description</label>
                                 <textarea name="description" defaultValue={editingService.description} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', minHeight: '80px' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service Images (Optional)</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                                    <label style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', backgroundColor: '#f9f9f9', fontWeight: '500'
+                                    }}>
+                                        <Plus size={16} /> Upload Photos
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleServicePhotoUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                    {isUploadingServicePhotos && <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>Compressing...</span>}
+                                </div>
+                                {servicePictures.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        {servicePictures.map((pic, idx) => (
+                                            <div key={idx} style={{ position: 'relative', width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #eee' }}>
+                                                <img src={pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setServicePictures(prev => prev.filter((_, i) => i !== idx))}
+                                                    style={{
+                                                        position: 'absolute', top: '2px', right: '2px', backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                 <input type="checkbox" name="popular" defaultChecked={editingService.popular} />
@@ -1344,11 +1458,18 @@ const TechDashboard = () => {
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Email Address</label>
-                                <input type="email" name="email" required style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                                <input type="email" name="email" style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Phone Number</label>
-                                <input type="tel" name="phone" placeholder="555-0100" style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} />
+                                <input 
+                                    type="tel" 
+                                    name="phone" 
+                                    value={addUserPhone} 
+                                    onChange={(e) => setAddUserPhone(formatPhoneNumber(e.target.value))} 
+                                    placeholder="555-0100" 
+                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
+                                />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Account Role</label>
@@ -1436,9 +1557,12 @@ const TechDashboard = () => {
                                         <option value="" disabled>Choose a customer...</option>
                                         {usersList
                                             .filter(u => u.role === 'customer')
-                                            .map(u => (
-                                                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                            ))
+                                            .map(u => {
+                                                const contactInfo = u.email ? u.email : (u.phone ? formatPhoneNumber(u.phone) : 'No email/phone');
+                                                return (
+                                                    <option key={u.id} value={u.id}>{u.name} ({contactInfo})</option>
+                                                );
+                                            })
                                         }
                                     </select>
                                 </div>
@@ -1463,7 +1587,7 @@ const TechDashboard = () => {
                                             <input 
                                                 type="tel" 
                                                 value={bookingFormData.guestPhone}
-                                                onChange={(e) => setBookingFormData({...bookingFormData, guestPhone: e.target.value})}
+                                                onChange={(e) => setBookingFormData({...bookingFormData, guestPhone: formatPhoneNumber(e.target.value)})}
                                                 placeholder="555-0100" 
                                                 style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px' }} 
                                             />

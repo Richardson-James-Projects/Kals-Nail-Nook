@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, Phone, Users, Lock, PenTool, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
 const timeSlots = [
     '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -285,7 +285,7 @@ const Booking = () => {
                     date: booking.date,
                     time: booking.time,
                     name: booking.name,
-                    phone: booking.phone,
+                    phone: cleanPhoneNumber(booking.phone),
                     email: booking.email,
                     status: booking.status,
                     notes: booking.notes,
@@ -308,7 +308,11 @@ const Booking = () => {
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let value = e.target.value;
+        if (e.target.name === 'phone') {
+            value = formatPhoneNumber(value);
+        }
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     return (
