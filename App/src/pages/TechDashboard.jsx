@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert, ChevronUp, ChevronDown } from 'lucide-react';
+import { Calendar, User, Users, FileText, X, Clock, Check, Save, Plus, Trash2, Edit2, Ban, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
 import { hashPassword } from '../utils/crypto';
 import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
@@ -1118,9 +1118,9 @@ const TechDashboard = () => {
                                                     backgroundColor: '#f3f4f6', color: index === 0 ? '#d1d5db' : '#4b5563', 
                                                     borderRadius: '4px', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer' 
                                                 }}
-                                                title="Move Up"
+                                                title="Move Left"
                                             >
-                                                <ChevronUp size={14} />
+                                                <ChevronLeft size={14} />
                                             </button>
                                             <button 
                                                 onClick={() => handleMoveService(s.id, 'down')}
@@ -1130,9 +1130,9 @@ const TechDashboard = () => {
                                                     backgroundColor: '#f3f4f6', color: index === services.length - 1 ? '#d1d5db' : '#4b5563', 
                                                     borderRadius: '4px', border: 'none', cursor: index === services.length - 1 ? 'not-allowed' : 'pointer' 
                                                 }}
-                                                title="Move Down"
+                                                title="Move Right"
                                             >
-                                                <ChevronDown size={14} />
+                                                <ChevronRight size={14} />
                                             </button>
                                         </div>
                                     </div>
