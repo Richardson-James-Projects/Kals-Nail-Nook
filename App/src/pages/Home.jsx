@@ -22,7 +22,7 @@ const Home = () => {
         const fetchPortfolio = async () => {
             let loadedPhotos = [];
             
-            if (isSupabaseConfigured()) {
+            if (isSupabaseConfigured) {
                 try {
                     const { data, error } = await supabase
                         .from('portfolio')

@@ -311,104 +311,115 @@ const TechDashboard = () => {
         let hasUploadError = false;
         let uploadedList = [...portfolioList];
 
-        for (let i = 0; i < portfolioFiles.length; i++) {
-            const file = portfolioFiles[i];
-            const photoId = `photo-${Date.now()}-${i}`;
-            let finalImageUrl = '';
+        try {
+            for (let i = 0; i < portfolioFiles.length; i++) {
+                const file = portfolioFiles[i];
+                const photoId = `photo-${Date.now()}-${i}`;
+                let finalImageUrl = '';
 
-            const nextSortOrder = uploadedList.length > 0 
-                ? Math.max(...uploadedList.map(p => p.sortOrder ?? 0)) + 1 
-                : 0;
+                const nextSortOrder = uploadedList.length > 0 
+                    ? Math.max(...uploadedList.map(p => p.sortOrder ?? 0)) + 1 
+                    : 0;
 
-            if (isSupabaseConfigured) {
-                try {
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${photoId}.${fileExt}`;
-                    const filePath = `portfolio/${fileName}`;
+                if (isSupabaseConfigured) {
+                    try {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${photoId}.${fileExt}`;
+                        const filePath = `portfolio/${fileName}`;
 
-                    // Upload file to storage bucket
-                    const { error: uploadError } = await supabase.storage
-                        .from('service-pictures')
-                        .upload(filePath, file);
+                        // Upload file to storage bucket
+                        const { error: uploadError } = await supabase.storage
+                            .from('service-pictures')
+                            .upload(filePath, file);
 
-                    if (uploadError) throw uploadError;
+                        if (uploadError) throw uploadError;
 
-                    // Get public URL
-                    const { data: urlData } = supabase.storage
-                        .from('service-pictures')
-                        .getPublicUrl(filePath);
+                        // Get public URL
+                        const { data: urlData } = supabase.storage
+                            .from('service-pictures')
+                            .getPublicUrl(filePath);
 
-                    finalImageUrl = urlData.publicUrl;
+                        finalImageUrl = urlData.publicUrl;
 
-                    // Insert into database
-                    const { error: insertError } = await supabase
-                        .from('portfolio')
-                        .insert([{
+                        // Insert into database
+                        const { error: insertError } = await supabase
+                            .from('portfolio')
+                            .insert([{
+                                id: photoId,
+                                image_url: finalImageUrl,
+                                caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                                sort_order: nextSortOrder
+                            }]);
+
+                        if (insertError) throw insertError;
+
+                        uploadedList.push({
                             id: photoId,
-                            image_url: finalImageUrl,
+                            imageUrl: finalImageUrl,
                             caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                            sort_order: nextSortOrder
-                        }]);
+                            sortOrder: nextSortOrder
+                        });
 
-                    if (insertError) throw insertError;
-
-                    uploadedList.push({
-                        id: photoId,
-                        imageUrl: finalImageUrl,
-                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                        sortOrder: nextSortOrder
-                    });
-
-                } catch (err) {
-                    console.error('Database portfolio upload error:', err);
-                    hasUploadError = true;
+                    } catch (err) {
+                        console.error('Database portfolio upload error:', err);
+                        hasUploadError = true;
+                        finalImageUrl = ''; // Force local storage fallback
+                    }
                 }
-            }
 
-            // Local Storage fallback (Option 3 / offline support)
-            if (!finalImageUrl) {
-                try {
-                    await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(file);
-                        reader.onloadend = () => {
-                            const base64Data = reader.result;
-                            const newPhoto = {
-                                id: photoId,
-                                imageUrl: base64Data,
-                                caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                                sortOrder: nextSortOrder
+                // Local Storage fallback (Option 3 / offline support)
+                if (!finalImageUrl) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onloadend = () => {
+                                try {
+                                    const base64Data = reader.result;
+                                    const newPhoto = {
+                                        id: photoId,
+                                        imageUrl: base64Data,
+                                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                                        sortOrder: nextSortOrder
+                                    };
+                                    
+                                    const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                                    localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
+                                    
+                                    uploadedList.push({
+                                        id: photoId,
+                                        imageUrl: base64Data,
+                                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                                        sortOrder: nextSortOrder
+                                    });
+                                    resolve();
+                                } catch (localErr) {
+                                    console.error('Error saving item to local storage:', localErr);
+                                    reject(localErr);
+                                }
                             };
-                            
-                            const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
-                            localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
-                            
-                            uploadedList.push({
-                                id: photoId,
-                                imageUrl: base64Data,
-                                caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                                sortOrder: nextSortOrder
-                            });
-                            resolve();
-                        };
-                        reader.onerror = reject;
-                    });
-                } catch (err) {
-                    console.error('Local storage portfolio save error:', err);
-                    hasUploadError = true;
+                            reader.onerror = () => reject(new Error('File reading error.'));
+                        });
+                    } catch (err) {
+                        console.error('Local storage portfolio save error:', err);
+                        hasUploadError = true;
+                    }
                 }
             }
-        }
+        } catch (globalErr) {
+            console.error('Global portfolio loop error:', globalErr);
+            setPortfolioError(`Unexpected error during upload: ${globalErr.message}`);
+        } finally {
+            // Reset inputs and load list - guaranteed to run
+            setPortfolioFiles([]);
+            setPortfolioCaption('');
+            setIsPortfolioUploading(false);
+            fetchPortfolioData();
 
-        if (hasUploadError) {
-            setPortfolioError('Some uploads failed or were saved locally.');
+            if (hasUploadError) {
+                setPortfolioError('Upload failed: Image might be too large for local cache limit (~5MB). Please check database table setup or try a smaller image.');
+            }
         }
-
-        // Reset inputs and reload list
-        setPortfolioFiles([]);
-        setPortfolioCaption('');
-        setIsPortfolioUploading(false);
-        fetchPortfolioData();
     };
 
     const handleDeletePortfolioPhoto = async (photoId, imageUrl) => {
