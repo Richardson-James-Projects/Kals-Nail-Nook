@@ -314,7 +314,7 @@ const TechDashboard = () => {
                 console.error('Error fetching portfolio:', err);
             }
         }
-        
+
         // Local Storage fallback
         try {
             const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
@@ -331,7 +331,7 @@ const TechDashboard = () => {
 
         // Sort by sortOrder
         loadedPhotos.sort((a, b) => a.sortOrder - b.sortOrder);
-        
+
         setPortfolioList(loadedPhotos);
 
         // Pre-fill editing captions state
@@ -358,7 +358,7 @@ const TechDashboard = () => {
         try {
             for (let i = 0; i < portfolioFiles.length; i++) {
                 const file = portfolioFiles[i];
-                
+
                 // Compress the image before uploading/saving!
                 let compressedResult;
                 try {
@@ -372,8 +372,8 @@ const TechDashboard = () => {
                 const photoId = `photo-${Date.now()}-${i}`;
                 let finalImageUrl = '';
 
-                const nextSortOrder = uploadedList.length > 0 
-                    ? Math.max(...uploadedList.map(p => p.sortOrder ?? 0)) + 1 
+                const nextSortOrder = uploadedList.length > 0
+                    ? Math.max(...uploadedList.map(p => p.sortOrder ?? 0)) + 1
                     : 0;
 
                 if (isSupabaseConfigured) {
@@ -440,10 +440,10 @@ const TechDashboard = () => {
                             caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
                             sortOrder: nextSortOrder
                         };
-                        
+
                         const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
                         localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
-                        
+
                         uploadedList.push({
                             id: photoId,
                             imageUrl: base64Data,
@@ -1919,7 +1919,7 @@ const TechDashboard = () => {
                                 gap: '1rem'
                             }}>
                                 <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>Add Photo to Portfolio</h3>
-                                
+
                                 <div style={{
                                     backgroundColor: '#eff6ff',
                                     border: '1px solid #bfdbfe',
@@ -1931,7 +1931,7 @@ const TechDashboard = () => {
                                 }}>
                                     ✨ Selected images are automatically optimized and compressed client-side to ensure maximum performance and instant loading speeds.
                                 </div>
-                                
+
                                 {portfolioError && (
                                     <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
                                         {portfolioError}
@@ -1940,9 +1940,9 @@ const TechDashboard = () => {
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Photos (Multiple Allowed)</label>
-                                    <input 
+                                    <input
                                         key={inputResetKey}
-                                        type="file" 
+                                        type="file"
                                         accept="image/*"
                                         multiple
                                         required
@@ -1951,19 +1951,8 @@ const TechDashboard = () => {
                                     />
                                 </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Photo Caption / Set Details</label>
-                                    <input 
-                                        type="text" 
-                                        value={portfolioCaption}
-                                        onChange={(e) => setPortfolioCaption(e.target.value)}
-                                        placeholder="e.g. Dreamy Pink Glitters with Chrome"
-                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                    />
-                                </div>
-
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     disabled={isPortfolioUploading}
                                     style={{
                                         backgroundColor: 'var(--color-primary)',
@@ -2003,14 +1992,14 @@ const TechDashboard = () => {
                                             }}>
                                                 {/* Image Container with overlays */}
                                                 <div style={{ position: 'relative', aspectRatio: '1/1', width: '100%', backgroundColor: '#f9f9f9' }}>
-                                                    <img 
-                                                        src={photo.imageUrl} 
-                                                        alt={photo.caption} 
+                                                    <img
+                                                        src={photo.imageUrl}
+                                                        alt={photo.caption}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     />
-                                                    
+
                                                     {/* Delete button (Top-Right) */}
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDeletePortfolioPhoto(photo.id, photo.imageUrl)}
                                                         style={{
                                                             position: 'absolute',
@@ -2087,7 +2076,7 @@ const TechDashboard = () => {
                                                 <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', backgroundColor: '#fff' }}>
                                                     <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b' }}>Caption:</label>
                                                     <div style={{ display: 'flex', gap: '4px' }}>
-                                                        <input 
+                                                        <input
                                                             type="text"
                                                             value={editingCaptions[photo.id] || ''}
                                                             onChange={(e) => setEditingCaptions(prev => ({ ...prev, [photo.id]: e.target.value }))}
