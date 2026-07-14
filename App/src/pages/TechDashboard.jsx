@@ -25,6 +25,49 @@ const formatDisplayDate = (dateStr, options = undefined) => {
     return new Date(dateStr).toLocaleDateString(undefined, options);
 };
 
+const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    const ratio = maxWidth / width;
+                    width = maxWidth;
+                    height = height * ratio;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        const base64Data = canvas.toDataURL('image/jpeg', quality);
+                        resolve({ file: compressedFile, base64: base64Data });
+                    } else {
+                        reject(new Error('Canvas compression failed'));
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
 const TechDashboard = () => {
     const { user } = useAuth();
 
@@ -315,6 +358,17 @@ const TechDashboard = () => {
         try {
             for (let i = 0; i < portfolioFiles.length; i++) {
                 const file = portfolioFiles[i];
+                
+                // Compress the image before uploading/saving!
+                let compressedResult;
+                try {
+                    compressedResult = await compressImage(file, 1200, 0.8);
+                } catch (compressErr) {
+                    console.error('Image compression failed, using original file:', compressErr);
+                    compressedResult = { file: file, base64: null };
+                }
+
+                const uploadFile = compressedResult.file;
                 const photoId = `photo-${Date.now()}-${i}`;
                 let finalImageUrl = '';
 
@@ -324,14 +378,14 @@ const TechDashboard = () => {
 
                 if (isSupabaseConfigured) {
                     try {
-                        const fileExt = file.name.split('.').pop();
+                        const fileExt = uploadFile.name.split('.').pop() || 'jpg';
                         const fileName = `${photoId}.${fileExt}`;
                         const filePath = `portfolio/${fileName}`;
 
-                        // Upload file to storage bucket
+                        // Upload compressed file to storage bucket
                         const { error: uploadError } = await supabase.storage
                             .from('service-pictures')
-                            .upload(filePath, file);
+                            .upload(filePath, uploadFile);
 
                         if (uploadError) throw uploadError;
 
@@ -371,35 +425,31 @@ const TechDashboard = () => {
                 // Local Storage fallback (Option 3 / offline support)
                 if (!finalImageUrl) {
                     try {
-                        await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.readAsDataURL(file);
-                            reader.onloadend = () => {
-                                try {
-                                    const base64Data = reader.result;
-                                    const newPhoto = {
-                                        id: photoId,
-                                        imageUrl: base64Data,
-                                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                                        sortOrder: nextSortOrder
-                                    };
-                                    
-                                    const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
-                                    localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
-                                    
-                                    uploadedList.push({
-                                        id: photoId,
-                                        imageUrl: base64Data,
-                                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
-                                        sortOrder: nextSortOrder
-                                    });
-                                    resolve();
-                                } catch (localErr) {
-                                    console.error('Error saving item to local storage:', localErr);
-                                    reject(localErr);
-                                }
-                            };
-                            reader.onerror = () => reject(new Error('File reading error.'));
+                        let base64Data = compressedResult.base64;
+                        if (!base64Data) {
+                            base64Data = await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.readAsDataURL(uploadFile);
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.onerror = () => reject(new Error('File reading error.'));
+                            });
+                        }
+
+                        const newPhoto = {
+                            id: photoId,
+                            imageUrl: base64Data,
+                            caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                            sortOrder: nextSortOrder
+                        };
+                        
+                        const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                        localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
+                        
+                        uploadedList.push({
+                            id: photoId,
+                            imageUrl: base64Data,
+                            caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                            sortOrder: nextSortOrder
                         });
                     } catch (err) {
                         console.error('Local storage portfolio save error:', err);
