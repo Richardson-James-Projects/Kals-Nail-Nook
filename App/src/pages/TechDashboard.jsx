@@ -417,7 +417,6 @@ const TechDashboard = () => {
 
                     } catch (err) {
                         console.error('Database portfolio upload error:', err);
-                        hasUploadError = true;
                         finalImageUrl = ''; // Force local storage fallback
                     }
                 }
@@ -453,7 +452,7 @@ const TechDashboard = () => {
                         });
                     } catch (err) {
                         console.error('Local storage portfolio save error:', err);
-                        hasUploadError = true;
+                        hasUploadError = true; // Both cloud and local writes failed
                     }
                 }
             }
@@ -1920,6 +1919,18 @@ const TechDashboard = () => {
                                 gap: '1rem'
                             }}>
                                 <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>Add Photo to Portfolio</h3>
+                                
+                                <div style={{
+                                    backgroundColor: '#eff6ff',
+                                    border: '1px solid #bfdbfe',
+                                    color: '#1e3a8a',
+                                    padding: '0.75rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    lineHeight: '1.3'
+                                }}>
+                                    ✨ Selected images are automatically optimized and compressed client-side to ensure maximum performance and instant loading speeds.
+                                </div>
                                 
                                 {portfolioError && (
                                     <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
