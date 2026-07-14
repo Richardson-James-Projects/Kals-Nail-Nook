@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'The Nail Nook',
-        short_name: 'NailNook',
-        description: 'Book your nail appointments at The Nail Nook',
+        name: 'Kals Nail Nook',
+        short_name: 'KalsNailNook',
+        description: 'Book your nail appointments at Kals Nail Nook',
         theme_color: '#ffffff',
         icons: [
           {

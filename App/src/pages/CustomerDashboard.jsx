@@ -214,9 +214,9 @@ const CustomerDashboard = () => {
         const formatTime = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
         const start = formatTime(dateObj);
         const end = formatTime(endDateObj);
-        const title = encodeURIComponent(`Nail Nook: ${booking.serviceName}`);
-        const details = encodeURIComponent(`Booking with ${booking.techName || 'The Nail Nook'}`);
-        const location = encodeURIComponent(`The Nail Nook, 3260 N 3450 W, Plain City, Utah 84404`);
+        const title = encodeURIComponent(`Kals Nail Nook: ${booking.serviceName}`);
+        const details = encodeURIComponent(`Booking with ${booking.techName || 'Kals Nail Nook'}`);
+        const location = encodeURIComponent(`Kals Nail Nook, 3260 N 3450 W, Plain City, Utah 84404`);
         return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
     };
 
@@ -292,7 +292,7 @@ const CustomerDashboard = () => {
                                                             )}
                                                         </div>
                                                         <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>
-                                                            {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                            {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'Kals Nail Nook'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -375,7 +375,7 @@ const CustomerDashboard = () => {
                                                         </span>
                                                     </div>
                                                     <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: (appt.notes || (appt.pictures && appt.pictures.length > 0)) ? '1rem' : '0' }}>
-                                                        {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'The Nail Nook'}
+                                                        {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'Kals Nail Nook'}
                                                     </div>
 
                                                     {(appt.notes || (appt.pictures && appt.pictures.length > 0)) && (

@@ -46,7 +46,7 @@ const Layout = () => {
                         color: 'var(--color-primary)',
                         fontFamily: 'Playfair Display, serif' // Fallback if Outfit isn't loaded yet
                     }}>
-                        The Nail Nook
+                        Kals Nail Nook
                     </Link>
 
                     {/* Desktop Nav */}
@@ -237,7 +237,7 @@ const Layout = () => {
                     gap: '1.5rem',
                     textAlign: 'center'
                 }}>
-                    <h3 style={{ color: 'var(--color-primary)', fontSize: '1.5rem' }}>The Nail Nook</h3>
+                    <h3 style={{ color: 'var(--color-primary)', fontSize: '1.5rem' }}>Kals Nail Nook</h3>
                     <p style={{ opacity: 0.8, maxWidth: '400px' }}>
                         Elevating your style with premium nail care services. Book your appointment today.
                     </p>
@@ -246,7 +246,7 @@ const Layout = () => {
                         <Facebook size={24} style={{ cursor: 'pointer' }} />
                     </div>
                     <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '1rem' }}>
-                        &copy; {new Date().getFullYear()} The Nail Nook. All rights reserved.
+                        &copy; {new Date().getFullYear()} Kals Nail Nook. All rights reserved.
                     </p>
                 </div>
             </footer>

@@ -67,7 +67,7 @@ const Register = () => {
                     Create Account
                 </h1>
                 <p style={{ textAlign: 'center', opacity: 0.6, marginBottom: '2rem' }}>
-                    Join The Nail Nook for seamless booking
+                    Join Kals Nail Nook for seamless booking
                 </p>
 
                 <form onSubmit={handleSubmit}>

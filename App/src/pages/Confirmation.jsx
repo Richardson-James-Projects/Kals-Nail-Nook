@@ -25,9 +25,9 @@ const Confirmation = () => {
         const formatTime = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
         const start = formatTime(dateObj);
         const end = formatTime(endDateObj);
-        const title = encodeURIComponent(`Nail Nook: ${booking.serviceName}`);
-        const details = encodeURIComponent(`Booking with ${booking.techName || 'The Nail Nook'}`);
-        const location = encodeURIComponent(`The Nail Nook, 3260 N 3450 W, Plain City, Utah 84404`);
+        const title = encodeURIComponent(`Kals Nail Nook: ${booking.serviceName}`);
+        const details = encodeURIComponent(`Booking with ${booking.techName || 'Kals Nail Nook'}`);
+        const location = encodeURIComponent(`Kals Nail Nook, 3260 N 3450 W, Plain City, Utah 84404`);
         return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
     };
 
@@ -93,7 +93,7 @@ const Confirmation = () => {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <MapPin size={18} style={{ color: 'var(--color-primary)' }} />
-                            <div>The Nail Nook<br /><span style={{ fontSize: '0.85rem', opacity: 0.7 }}>3260 N 3450 W,<br />Plain City, Utah 84404</span></div>
+                             <div>Kals Nail Nook<br /><span style={{ fontSize: '0.85rem', opacity: 0.7 }}>3260 N 3450 W,<br />Plain City, Utah 84404</span></div>
                         </div>
                     </div>
                 </div>
