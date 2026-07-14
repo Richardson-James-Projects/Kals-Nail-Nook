@@ -83,6 +83,13 @@ const TechDashboard = () => {
         guestEmail: ''
     });
 
+    // Portfolio Management States
+    const [portfolioList, setPortfolioList] = useState([]);
+    const [portfolioFile, setPortfolioFile] = useState(null);
+    const [portfolioCaption, setPortfolioCaption] = useState('');
+    const [isPortfolioUploading, setIsPortfolioUploading] = useState(false);
+    const [portfolioError, setPortfolioError] = useState('');
+
     const TIME_SLOTS = [
         '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
         '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
@@ -241,8 +248,158 @@ const TechDashboard = () => {
         }
     };
 
+    const fetchPortfolioData = async () => {
+        let loadedPhotos = [];
+        if (isSupabaseConfigured) {
+            try {
+                const { data, error } = await supabase
+                    .from('portfolio')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (!error && data) {
+                    loadedPhotos = data.map(item => ({
+                        id: item.id,
+                        imageUrl: item.image_url,
+                        caption: item.caption
+                    }));
+                }
+            } catch (err) {
+                console.error('Error fetching portfolio:', err);
+            }
+        }
+        
+        // Local Storage fallback
+        try {
+            const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+            loadedPhotos = [...localPhotos, ...loadedPhotos];
+        } catch (err) {
+            console.error('Error fetching local storage portfolio:', err);
+        }
+        
+        setPortfolioList(loadedPhotos);
+    };
+
+    const handleUploadPortfolioPhoto = async (e) => {
+        e.preventDefault();
+        if (!portfolioFile) {
+            setPortfolioError('Please select a photo to upload.');
+            return;
+        }
+
+        setIsPortfolioUploading(true);
+        setPortfolioError('');
+
+        const photoId = `photo-${Date.now()}`;
+        let finalImageUrl = '';
+
+        if (isSupabaseConfigured) {
+            try {
+                const fileExt = portfolioFile.name.split('.').pop();
+                const fileName = `${photoId}.${fileExt}`;
+                const filePath = `portfolio/${fileName}`;
+
+                // Upload file to storage bucket
+                const { error: uploadError } = await supabase.storage
+                    .from('service-pictures')
+                    .upload(filePath, portfolioFile);
+
+                if (uploadError) throw uploadError;
+
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('service-pictures')
+                    .getPublicUrl(filePath);
+
+                finalImageUrl = urlData.publicUrl;
+
+                // Insert into database
+                const { error: insertError } = await supabase
+                    .from('portfolio')
+                    .insert([{
+                        id: photoId,
+                        image_url: finalImageUrl,
+                        caption: portfolioCaption
+                    }]);
+
+                if (insertError) throw insertError;
+
+            } catch (err) {
+                console.error('Database portfolio upload error:', err);
+                setPortfolioError(`Database upload error. Falling back to local storage.`);
+            }
+        }
+
+        // Local Storage fallback (Option 3 / offline support)
+        if (!finalImageUrl) {
+            try {
+                const reader = new FileReader();
+                reader.readAsDataURL(portfolioFile);
+                reader.onloadend = () => {
+                    const base64Data = reader.result;
+                    const newPhoto = {
+                        id: photoId,
+                        imageUrl: base64Data,
+                        caption: portfolioCaption
+                    };
+                    const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                    localStorage.setItem('portfolio', JSON.stringify([newPhoto, ...localPhotos]));
+                    
+                    setPortfolioFile(null);
+                    setPortfolioCaption('');
+                    setIsPortfolioUploading(false);
+                    fetchPortfolioData();
+                };
+                return;
+            } catch (err) {
+                console.error('Local storage portfolio save error:', err);
+                setPortfolioError('Failed to save photo locally.');
+                setIsPortfolioUploading(false);
+                return;
+            }
+        }
+
+        setPortfolioFile(null);
+        setPortfolioCaption('');
+        setIsPortfolioUploading(false);
+        fetchPortfolioData();
+    };
+
+    const handleDeletePortfolioPhoto = async (photoId, imageUrl) => {
+        if (confirm('Are you sure you want to delete this photo from your portfolio?')) {
+            if (isSupabaseConfigured) {
+                try {
+                    // Delete from database
+                    await supabase
+                        .from('portfolio')
+                        .delete()
+                        .eq('id', photoId);
+
+                    // Delete from storage if possible
+                    if (imageUrl && imageUrl.includes('portfolio/')) {
+                        const filePath = 'portfolio/' + imageUrl.split('portfolio/')[1];
+                        await supabase.storage.from('service-pictures').remove([filePath]);
+                    }
+                } catch (err) {
+                    console.error('Error deleting portfolio photo from DB:', err);
+                }
+            }
+
+            // Local storage delete
+            try {
+                const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                const filtered = localPhotos.filter(p => p.id !== photoId);
+                localStorage.setItem('portfolio', JSON.stringify(filtered));
+            } catch (err) {
+                console.error('Error deleting local storage portfolio photo:', err);
+            }
+
+            fetchPortfolioData();
+        }
+    };
+
     useEffect(() => {
         fetchDashboardData();
+        fetchPortfolioData();
     }, [user]);
 
     // --- APPOINTMENT ACTIONS ---
@@ -1540,6 +1697,148 @@ const TechDashboard = () => {
                                         )}
                                 </tbody>
                             </table>
+                        </div>
+                    </section>
+                </div>
+
+                {/* 5. Portfolio Showcase Management */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1.5rem', minWidth: 0 }}>
+                    <section style={{
+                        backgroundColor: 'var(--color-white)',
+                        borderRadius: '12px',
+                        padding: '2rem',
+                        boxShadow: 'var(--shadow-sm)'
+                    }}>
+                        <h2 style={{ fontSize: '1.45rem', margin: '0 0 2rem 0', borderBottom: '2px solid #f3f4f6', paddingBottom: '0.75rem', color: 'var(--color-secondary)' }}>
+                            Portfolio Showcase Management
+                        </h2>
+
+                        {/* Upload Form and Grid Layout */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+                            {/* Left Column: Upload New Photo */}
+                            <form onSubmit={handleUploadPortfolioPhoto} style={{
+                                backgroundColor: '#fcfcfc',
+                                border: '1px dashed #ccc',
+                                padding: '1.5rem',
+                                borderRadius: '8px',
+                                display: 'grid',
+                                gap: '1rem'
+                            }}>
+                                <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>Add Photo to Portfolio</h3>
+                                
+                                {portfolioError && (
+                                    <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                        {portfolioError}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Photo</label>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*"
+                                        required
+                                        onChange={(e) => setPortfolioFile(e.target.files[0])}
+                                        style={{ width: '100%', fontSize: '0.85rem' }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Photo Caption / Set Details</label>
+                                    <input 
+                                        type="text" 
+                                        value={portfolioCaption}
+                                        onChange={(e) => setPortfolioCaption(e.target.value)}
+                                        placeholder="e.g. Dreamy Pink Glitters with Chrome"
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+
+                                <button 
+                                    type="submit" 
+                                    disabled={isPortfolioUploading}
+                                    style={{
+                                        backgroundColor: 'var(--color-primary)',
+                                        color: 'var(--color-secondary)',
+                                        border: 'none',
+                                        padding: '0.6rem 1rem',
+                                        borderRadius: '6px',
+                                        fontWeight: 'bold',
+                                        cursor: isPortfolioUploading ? 'not-allowed' : 'pointer',
+                                        opacity: isPortfolioUploading ? 0.7 : 1,
+                                        transition: 'opacity 0.2s'
+                                    }}
+                                >
+                                    {isPortfolioUploading ? 'Uploading...' : 'Upload Photo'}
+                                </button>
+                            </form>
+
+                            {/* Right Column: Manage / Delete Gallery Photos */}
+                            <div>
+                                <h3 style={{ fontSize: '1.1rem', margin: '0 0 1rem 0' }}>Current Showcase Photos ({portfolioList.length})</h3>
+                                {portfolioList.length === 0 ? (
+                                    <p style={{ opacity: 0.5, fontStyle: 'italic', fontSize: '0.9rem' }}>
+                                        No uploaded photos yet. Default gallery images are displayed on the homepage.
+                                    </p>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+                                        {portfolioList.map((photo) => (
+                                            <div key={photo.id} style={{
+                                                position: 'relative',
+                                                aspectRatio: '1/1',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                border: '1px solid #eee',
+                                                backgroundColor: '#f9f9f9'
+                                            }}>
+                                                <img 
+                                                    src={photo.imageUrl} 
+                                                    alt={photo.caption} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleDeletePortfolioPhoto(photo.id, photo.imageUrl)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '4px',
+                                                        right: '4px',
+                                                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '50%',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        boxShadow: 'var(--shadow-sm)'
+                                                    }}
+                                                    title="Delete photo"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                                                    color: '#fff',
+                                                    fontSize: '0.65rem',
+                                                    padding: '2px 4px',
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    textAlign: 'center'
+                                                }} title={photo.caption}>
+                                                    {photo.caption || 'Set'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </section>
                 </div>

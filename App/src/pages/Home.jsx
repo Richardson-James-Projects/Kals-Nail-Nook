@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Clock, Calendar, X } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 
 const GALLERY_IMAGES = [
     { src: '/gallery/IMG_9829_edited.jpg', alt: 'Premium Hard Gel Set' },
@@ -14,6 +15,58 @@ const GALLERY_IMAGES = [
 
 const Home = () => {
     const [activeImage, setActiveImage] = useState(null);
+    const [portfolio, setPortfolio] = useState([]);
+
+    useEffect(() => {
+        const fetchPortfolio = async () => {
+            let loadedPhotos = [];
+            
+            if (isSupabaseConfigured()) {
+                try {
+                    const { data, error } = await supabase
+                        .from('portfolio')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (!error && data && data.length > 0) {
+                        loadedPhotos = data.map(item => ({
+                            id: item.id,
+                            src: item.image_url,
+                            alt: item.caption || 'Nail set creation'
+                        }));
+                    }
+                } catch (err) {
+                    console.error('Error fetching portfolio from Supabase:', err);
+                }
+            }
+            
+            // Check local storage fallback
+            try {
+                const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                if (localPhotos.length > 0) {
+                    const formattedLocal = localPhotos.map(item => ({
+                        id: item.id,
+                        src: item.imageUrl,
+                        alt: item.caption || 'Nail set creation'
+                    }));
+                    // Prepend local photos to show them first (most recent)
+                    loadedPhotos = [...formattedLocal, ...loadedPhotos];
+                }
+            } catch (err) {
+                console.error('Error loading local storage portfolio:', err);
+            }
+            
+            // If empty, fall back to our gorgeous default JPEGs
+            if (loadedPhotos.length === 0) {
+                setPortfolio(GALLERY_IMAGES);
+            } else {
+                // Show the most recent 6 photos
+                setPortfolio(loadedPhotos.slice(0, 6));
+            }
+        };
+
+        fetchPortfolio();
+    }, []);
 
     return (
         <div>
@@ -117,7 +170,7 @@ const Home = () => {
                         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                         gap: '1.5rem'
                     }}>
-                        {GALLERY_IMAGES.map((img, idx) => (
+                        {portfolio.map((img, idx) => (
                             <div 
                                 key={idx} 
                                 onClick={() => setActiveImage(img)}
