@@ -89,7 +89,7 @@ const Booking = () => {
                         .select('*')
                         .neq('status', 'Cancelled');
                     if (errBookings) throw errBookings;
-                    
+
                     const loadedBookings = (dbBookings || []).map(b => ({
                         id: b.id,
                         service: b.service,
@@ -195,33 +195,33 @@ const Booking = () => {
         const concurrentBookings = existingBookings.filter(b => b.date === date && b.time === time && b.status !== 'Cancelled');
 
         if (formData.techId === 'any') {
-             let workingTechs = 0;
-             technicians.forEach(t => {
-                 const sched = techSchedules[t.id];
-                 if (sched) {
-                     const ds = sched.find(d => d.day === dayName);
-                     if (ds && ds.isWorking) {
-                         const start = parseInt(ds.startTime.replace(':', ''));
-                         const end = parseInt(ds.endTime.replace(':', ''));
-                         if (slotTime24 >= start && slotTime24 < end) workingTechs++;
-                     }
-                 }
-             });
-             return workingTechs > concurrentBookings.length;
+            let workingTechs = 0;
+            technicians.forEach(t => {
+                const sched = techSchedules[t.id];
+                if (sched) {
+                    const ds = sched.find(d => d.day === dayName);
+                    if (ds && ds.isWorking) {
+                        const start = parseInt(ds.startTime.replace(':', ''));
+                        const end = parseInt(ds.endTime.replace(':', ''));
+                        if (slotTime24 >= start && slotTime24 < end) workingTechs++;
+                    }
+                }
+            });
+            return workingTechs > concurrentBookings.length;
         } else {
-             const schedule = techSchedules[formData.techId];
-             if (!schedule) return false;
-             
-             const ds = schedule.find(d => d.day === dayName);
-             if (!ds || !ds.isWorking) return false;
-             
-             const start = parseInt(ds.startTime.replace(':', ''));
-             const end = parseInt(ds.endTime.replace(':', ''));
-             if (slotTime24 < start || slotTime24 >= end) return false;
+            const schedule = techSchedules[formData.techId];
+            if (!schedule) return false;
 
-             const isBooked = concurrentBookings.some(b => b.techId === formData.techId);
-             if (isBooked) return false;
-             return true;
+            const ds = schedule.find(d => d.day === dayName);
+            if (!ds || !ds.isWorking) return false;
+
+            const start = parseInt(ds.startTime.replace(':', ''));
+            const end = parseInt(ds.endTime.replace(':', ''));
+            if (slotTime24 < start || slotTime24 >= end) return false;
+
+            const isBooked = concurrentBookings.some(b => b.techId === formData.techId);
+            if (isBooked) return false;
+            return true;
         }
     };
 
@@ -272,20 +272,20 @@ const Booking = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         let assignedTechId = formData.techId;
         if (assignedTechId === 'any') {
             const dateObj = new Date(formData.date + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
             const slotTime24 = convertTo24Hour(formData.time);
             const concurrent = existingBookings.filter(b => b.date === formData.date && b.time === formData.time && b.status !== 'Cancelled');
-            
+
             const availableTech = technicians.find(t => {
-                 const ds = techSchedules[t.id]?.find(d => d.day === dayName);
-                 if (!ds || !ds.isWorking) return false;
-                 if (slotTime24 < parseInt(ds.startTime.replace(':', '')) || slotTime24 >= parseInt(ds.endTime.replace(':', ''))) return false;
-                 if (concurrent.some(b => b.techId === t.id)) return false;
-                 return true;
+                const ds = techSchedules[t.id]?.find(d => d.day === dayName);
+                if (!ds || !ds.isWorking) return false;
+                if (slotTime24 < parseInt(ds.startTime.replace(':', '')) || slotTime24 >= parseInt(ds.endTime.replace(':', ''))) return false;
+                if (concurrent.some(b => b.techId === t.id)) return false;
+                return true;
             });
             assignedTechId = availableTech ? availableTech.id : technicians[0]?.id;
         }
@@ -336,7 +336,7 @@ const Booking = () => {
                         delete fallbackBooking.addons;
                         if (booking.addons && booking.addons.length > 0) {
                             const addonsStr = `Selected Add-ons: ${booking.addons.map(a => a.split(' (')[0]).join(', ')}`;
-                            fallbackBooking.notes = fallbackBooking.notes 
+                            fallbackBooking.notes = fallbackBooking.notes
                                 ? `${fallbackBooking.notes}\n\n[${addonsStr}]`
                                 : `[${addonsStr}]`;
                         }
@@ -369,7 +369,7 @@ const Booking = () => {
     const getPricesInfo = () => {
         const mainServiceObj = services.find(s => s.id === formData.service);
         if (!mainServiceObj) return { mainPrice: 0, addonsPrice: 0, total: 0 };
-        
+
         const parsePrice = (priceStr) => {
             if (!priceStr) return 0;
             const numeric = priceStr.replace(/[^0-9]/g, '');
@@ -377,7 +377,7 @@ const Booking = () => {
         };
 
         const mainPrice = parsePrice(mainServiceObj.price);
-        
+
         let addonsPrice = 0;
         selectedAddons.forEach(addonNameWithPrice => {
             const match = addonNameWithPrice.match(/\(\$([0-9]+)\)/);
@@ -436,7 +436,6 @@ const Booking = () => {
                             }}
                             style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: '#fff', appearance: 'none' }}
                         >
-                            <option value="any">No Preference</option>
                             {technicians.map(t => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
@@ -463,8 +462,8 @@ const Booking = () => {
                                     fontSize: '0.9rem',
                                     transition: 'all 0.2s'
                                 }}>
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={isChecked}
                                         onChange={(e) => {
                                             if (e.target.checked) {
