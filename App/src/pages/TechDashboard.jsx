@@ -89,6 +89,7 @@ const TechDashboard = () => {
     const [portfolioCaption, setPortfolioCaption] = useState('');
     const [isPortfolioUploading, setIsPortfolioUploading] = useState(false);
     const [portfolioError, setPortfolioError] = useState('');
+    const [inputResetKey, setInputResetKey] = useState(0);
 
     const TIME_SLOTS = [
         '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -414,6 +415,7 @@ const TechDashboard = () => {
             setPortfolioFiles([]);
             setPortfolioCaption('');
             setIsPortfolioUploading(false);
+            setInputResetKey(prev => prev + 1);
             fetchPortfolioData();
 
             if (hasUploadError) {
@@ -1878,7 +1880,7 @@ const TechDashboard = () => {
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Photos (Multiple Allowed)</label>
                                     <input 
-                                        key={portfolioFiles.length === 0 ? 'empty' : 'files'}
+                                        key={inputResetKey}
                                         type="file" 
                                         accept="image/*"
                                         multiple
