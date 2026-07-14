@@ -7,10 +7,21 @@ const Login = () => {
     const [isTech, setIsTech] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login, updatePassword } = useAuth();
+    const { login, updatePassword, loginWithOAuth } = useAuth();
     const navigate = useNavigate();
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    const handleSocialLogin = async (provider) => {
+        setError('');
+        setIsLoading(true);
+        try {
+            await loginWithOAuth(provider);
+        } catch (err) {
+            setError(err.message || `Failed to sign in with ${provider}`);
+            setIsLoading(false);
+        }
+    };
 
     // Force Password Change flow
     const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -303,9 +314,71 @@ const Login = () => {
                 </form>
 
                 {!isTech && (
-                    <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem' }}>
-                        Don't have an account? <Link to="/register" style={{ color: 'var(--color-primary)', fontWeight: '600' }}>Register here</Link>
-                    </p>
+                    <>
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0', opacity: 0.4 }}>
+                            <div style={{ flex: 1, height: '1px', backgroundColor: '#000' }}></div>
+                            <span style={{ padding: '0 10px', fontSize: '0.8rem', fontWeight: '500' }}>or continue with</span>
+                            <div style={{ flex: 1, height: '1px', backgroundColor: '#000' }}></div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => handleSocialLogin('google')}
+                                disabled={isLoading}
+                                style={{
+                                    padding: '0.65rem',
+                                    backgroundColor: '#fff',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontWeight: '500',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M23.5 12.25c0-.8-.08-1.6-.22-2.38H12v4.51h6.46a5.53 5.53 0 01-2.4 3.63v3h3.87c2.27-2.09 3.57-5.17 3.57-8.75z" fill="#4285F4"/>
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3c-1.08.72-2.45 1.16-4.06 1.16-3.13 0-5.77-2.11-6.72-4.96h-4v3.1A12 12 0 0012 24z" fill="#34A853"/>
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M5.28 14.29a7.22 7.22 0 010-2.58v-3.1h-4A12 12 0 000 12c0 2.22.6 4.3 1.66 6.09l3.62-2.8a7.22 7.22 0 010-1z" fill="#FBBC05"/>
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43A11.96 11.96 0 0012 0 12 12 0 001.28 6.19l4 3.1c.95-2.85 3.59-4.96 6.72-4.96z" fill="#EA4335"/>
+                                </svg>
+                                Google
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSocialLogin('facebook')}
+                                disabled={isLoading}
+                                style={{
+                                    padding: '0.65rem',
+                                    backgroundColor: '#1877f2',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '500',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                                </svg>
+                                Facebook
+                            </button>
+                        </div>
+
+                        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem' }}>
+                            Don't have an account? <Link to="/register" style={{ color: 'var(--color-primary)', fontWeight: '600' }}>Register here</Link>
+                        </p>
+                    </>
                 )}
             </div>
         </div>
