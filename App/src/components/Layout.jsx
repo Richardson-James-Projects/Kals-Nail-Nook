@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Instagram, Facebook, LogOut, User } from 'lucide-react';
+import { Menu, X, Instagram, Facebook, LogOut, User, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
@@ -238,9 +238,31 @@ const Layout = () => {
                     textAlign: 'center'
                 }}>
                     <h3 style={{ color: 'var(--color-primary)', fontSize: '1.5rem' }}>Kals Nail Nook</h3>
-                    <p style={{ opacity: 0.8, maxWidth: '400px' }}>
+                    <p style={{ opacity: 0.8, maxWidth: '400px', marginBottom: '0.25rem' }}>
                         Elevating your style with premium nail care services. Book your appointment today.
                     </p>
+                    <a 
+                        href="https://maps.google.com/?q=3260+N+3450+W+Plain+City+Utah+84404"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            color: 'var(--color-primary)',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            marginBottom: '0.75rem',
+                            opacity: 0.9,
+                            transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = 0.9}
+                    >
+                        <MapPin size={16} />
+                        <span>3260 N 3450 W, Plain City, UT 84404</span>
+                    </a>
                     <div style={{ display: 'flex', gap: '1.5rem' }}>
                         <a 
                             href="https://www.instagram.com/kalsnailnook" 

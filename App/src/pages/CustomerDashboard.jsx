@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, PenTool, Save, Trash2, Upload, X } from 'lucide-react';
+import { Calendar, PenTool, Save, Trash2, Upload, X, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
@@ -291,8 +291,20 @@ const CustomerDashboard = () => {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1rem' }}>
+                                                        <div style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                                                             {formatDisplayDate(appt.date)} at {appt.time} with {appt.techName || 'Kals Nail Nook'}
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#666', marginBottom: '1rem' }}>
+                                                            <MapPin size={12} color="var(--color-primary)" />
+                                                            <a 
+                                                                href="https://maps.google.com/?q=3260+N+3450+W+Plain+City+Utah+84404"
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{ color: 'inherit', textDecoration: 'underline' }}
+                                                                title="Open in Google Maps"
+                                                            >
+                                                                3260 N 3450 W, Plain City, UT 84404
+                                                            </a>
                                                         </div>
                                                     </div>
                                                 </div>

@@ -731,9 +731,13 @@ const Booking = () => {
                                     ))}
                                 </div>
                             )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '1.05rem', color: 'var(--color-secondary)', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '1.05rem', color: 'var(--color-secondary)', marginTop: '0.5rem', borderBottom: '1px dashed #eee', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
                                 <span>Estimated Total:</span>
                                 <span>{priceInfo.totalPriceStr}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.4' }}>
+                                <span style={{ fontWeight: '600' }}>📍 Location:</span>
+                                <span>3260 N 3450 W, Plain City, UT 84404</span>
                             </div>
                         </div>
                     );

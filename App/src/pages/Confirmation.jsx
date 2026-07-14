@@ -91,9 +91,21 @@ const Confirmation = () => {
                             <div>{booking.time}</div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <MapPin size={18} style={{ color: 'var(--color-primary)' }} />
-                             <div>Kals Nail Nook<br /><span style={{ fontSize: '0.85rem', opacity: 0.7 }}>3260 N 3450 W,<br />Plain City, Utah 84404</span></div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <MapPin size={18} style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                                <strong>Kals Nail Nook</strong>
+                                <br />
+                                <a 
+                                    href="https://maps.google.com/?q=3260+N+3450+W+Plain+City+Utah+84404"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: '0.85rem', color: 'inherit', opacity: 0.8, textDecoration: 'underline' }}
+                                    title="Open in Google Maps"
+                                >
+                                    3260 N 3450 W, Plain City, Utah 84404
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
