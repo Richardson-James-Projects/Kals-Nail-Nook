@@ -248,6 +248,8 @@ const TechDashboard = () => {
         }
     };
 
+    const [editingCaptions, setEditingCaptions] = useState({});
+
     const fetchPortfolioData = async () => {
         let loadedPhotos = [];
         if (isSupabaseConfigured) {
@@ -255,12 +257,13 @@ const TechDashboard = () => {
                 const { data, error } = await supabase
                     .from('portfolio')
                     .select('*')
-                    .order('created_at', { ascending: false });
+                    .order('sort_order', { ascending: true });
                 if (!error && data) {
                     loadedPhotos = data.map(item => ({
                         id: item.id,
                         imageUrl: item.image_url,
-                        caption: item.caption
+                        caption: item.caption,
+                        sortOrder: item.sort_order ?? 9999
                     }));
                 }
             } catch (err) {
@@ -271,12 +274,28 @@ const TechDashboard = () => {
         // Local Storage fallback
         try {
             const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
-            loadedPhotos = [...localPhotos, ...loadedPhotos];
+            const formattedLocal = localPhotos.map(item => ({
+                id: item.id,
+                imageUrl: item.imageUrl,
+                caption: item.caption,
+                sortOrder: item.sortOrder ?? 9999
+            }));
+            loadedPhotos = [...loadedPhotos, ...formattedLocal];
         } catch (err) {
             console.error('Error fetching local storage portfolio:', err);
         }
+
+        // Sort by sortOrder
+        loadedPhotos.sort((a, b) => a.sortOrder - b.sortOrder);
         
         setPortfolioList(loadedPhotos);
+
+        // Pre-fill editing captions state
+        const initialCaptions = {};
+        loadedPhotos.forEach(p => {
+            initialCaptions[p.id] = p.caption || '';
+        });
+        setEditingCaptions(initialCaptions);
     };
 
     const handleUploadPortfolioPhoto = async (e) => {
@@ -291,6 +310,11 @@ const TechDashboard = () => {
 
         const photoId = `photo-${Date.now()}`;
         let finalImageUrl = '';
+
+        // Calculate sort order to place it at the end
+        const nextSortOrder = portfolioList.length > 0 
+            ? Math.max(...portfolioList.map(p => p.sortOrder ?? 0)) + 1 
+            : 0;
 
         if (isSupabaseConfigured) {
             try {
@@ -318,7 +342,8 @@ const TechDashboard = () => {
                     .insert([{
                         id: photoId,
                         image_url: finalImageUrl,
-                        caption: portfolioCaption
+                        caption: portfolioCaption,
+                        sort_order: nextSortOrder
                     }]);
 
                 if (insertError) throw insertError;
@@ -339,10 +364,11 @@ const TechDashboard = () => {
                     const newPhoto = {
                         id: photoId,
                         imageUrl: base64Data,
-                        caption: portfolioCaption
+                        caption: portfolioCaption,
+                        sortOrder: nextSortOrder
                     };
                     const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
-                    localStorage.setItem('portfolio', JSON.stringify([newPhoto, ...localPhotos]));
+                    localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
                     
                     setPortfolioFile(null);
                     setPortfolioCaption('');
@@ -395,6 +421,91 @@ const TechDashboard = () => {
 
             fetchPortfolioData();
         }
+    };
+
+    const handleMovePortfolioPhoto = async (photoId, direction) => {
+        const index = portfolioList.findIndex(p => p.id === photoId);
+        if (index === -1) return;
+
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= portfolioList.length) return;
+
+        const listCopy = [...portfolioList];
+        const temp = listCopy[index];
+        listCopy[index] = listCopy[newIndex];
+        listCopy[newIndex] = temp;
+
+        const updatedList = listCopy.map((item, idx) => ({
+            ...item,
+            sortOrder: idx
+        }));
+
+        setPortfolioList(updatedList);
+
+        if (isSupabaseConfigured) {
+            try {
+                for (let i = 0; i < updatedList.length; i++) {
+                    const item = updatedList[i];
+                    await supabase
+                        .from('portfolio')
+                        .update({ sort_order: item.sortOrder })
+                        .eq('id', item.id);
+                }
+            } catch (err) {
+                console.error('Error updating sort order in Supabase:', err);
+            }
+        }
+
+        try {
+            const localPhotos = updatedList.map(item => ({
+                id: item.id,
+                imageUrl: item.imageUrl,
+                caption: item.caption,
+                sortOrder: item.sortOrder
+            }));
+            localStorage.setItem('portfolio', JSON.stringify(localPhotos));
+        } catch (err) {
+            console.error('Error saving sort order to local storage:', err);
+        }
+    };
+
+    const handleSavePortfolioCaption = async (photoId) => {
+        const newCaption = editingCaptions[photoId];
+        if (newCaption === undefined) return;
+
+        const updatedList = portfolioList.map(p => {
+            if (p.id === photoId) {
+                return { ...p, caption: newCaption };
+            }
+            return p;
+        });
+        setPortfolioList(updatedList);
+
+        if (isSupabaseConfigured) {
+            try {
+                await supabase
+                    .from('portfolio')
+                    .update({ caption: newCaption })
+                    .eq('id', photoId);
+            } catch (err) {
+                console.error('Error updating caption in Supabase:', err);
+            }
+        }
+
+        try {
+            const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+            const updatedLocal = localPhotos.map(p => {
+                if (p.id === photoId) {
+                    return { ...p, caption: newCaption };
+                }
+                return p;
+            });
+            localStorage.setItem('portfolio', JSON.stringify(updatedLocal));
+        } catch (err) {
+            console.error('Error saving caption to local storage:', err);
+        }
+
+        alert('Caption saved successfully!');
     };
 
     useEffect(() => {
@@ -1781,58 +1892,139 @@ const TechDashboard = () => {
                                         No uploaded photos yet. Default gallery images are displayed on the homepage.
                                     </p>
                                 ) : (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
-                                        {portfolioList.map((photo) => (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1.5rem', maxHeight: '500px', overflowY: 'auto', paddingRight: '4px' }}>
+                                        {portfolioList.map((photo, index) => (
                                             <div key={photo.id} style={{
-                                                position: 'relative',
-                                                aspectRatio: '1/1',
-                                                borderRadius: '6px',
+                                                borderRadius: '8px',
                                                 overflow: 'hidden',
-                                                border: '1px solid #eee',
-                                                backgroundColor: '#f9f9f9'
+                                                border: '1px solid #ddd',
+                                                backgroundColor: '#fff',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                position: 'relative'
                                             }}>
-                                                <img 
-                                                    src={photo.imageUrl} 
-                                                    alt={photo.caption} 
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                                <button 
-                                                    onClick={() => handleDeletePortfolioPhoto(photo.id, photo.imageUrl)}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '4px',
-                                                        right: '4px',
-                                                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                                                        color: '#fff',
-                                                        border: 'none',
-                                                        borderRadius: '50%',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        boxShadow: 'var(--shadow-sm)'
-                                                    }}
-                                                    title="Delete photo"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    bottom: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                                                    color: '#fff',
-                                                    fontSize: '0.65rem',
-                                                    padding: '2px 4px',
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    textAlign: 'center'
-                                                }} title={photo.caption}>
-                                                    {photo.caption || 'Set'}
+                                                {/* Image Container with overlays */}
+                                                <div style={{ position: 'relative', aspectRatio: '1/1', width: '100%', backgroundColor: '#f9f9f9' }}>
+                                                    <img 
+                                                        src={photo.imageUrl} 
+                                                        alt={photo.caption} 
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                    
+                                                    {/* Delete button (Top-Right) */}
+                                                    <button 
+                                                        onClick={() => handleDeletePortfolioPhoto(photo.id, photo.imageUrl)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '8px',
+                                                            right: '8px',
+                                                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            boxShadow: 'var(--shadow-sm)',
+                                                            transition: 'transform 0.1s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                        title="Delete photo"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+
+                                                    {/* Reordering arrows (Top-Left) */}
+                                                    <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '4px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMovePortfolioPhoto(photo.id, 'up')}
+                                                            disabled={index === 0}
+                                                            style={{
+                                                                width: '26px',
+                                                                height: '26px',
+                                                                backgroundColor: index === 0 ? 'rgba(243, 244, 246, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+                                                                color: index === 0 ? '#9ca3af' : '#1f2937',
+                                                                border: '1px solid #ddd',
+                                                                borderRadius: '4px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: index === 0 ? 'not-allowed' : 'pointer',
+                                                                boxShadow: 'var(--shadow-sm)'
+                                                            }}
+                                                            title="Move Left"
+                                                        >
+                                                            <ChevronLeft size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMovePortfolioPhoto(photo.id, 'down')}
+                                                            disabled={index === portfolioList.length - 1}
+                                                            style={{
+                                                                width: '26px',
+                                                                height: '26px',
+                                                                backgroundColor: index === portfolioList.length - 1 ? 'rgba(243, 244, 246, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+                                                                color: index === portfolioList.length - 1 ? '#9ca3af' : '#1f2937',
+                                                                border: '1px solid #ddd',
+                                                                borderRadius: '4px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: index === portfolioList.length - 1 ? 'not-allowed' : 'pointer',
+                                                                boxShadow: 'var(--shadow-sm)'
+                                                            }}
+                                                            title="Move Right"
+                                                        >
+                                                            <ChevronRight size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Caption Edit Container (Bottom) */}
+                                                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', backgroundColor: '#fff' }}>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b' }}>Caption:</label>
+                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                        <input 
+                                                            type="text"
+                                                            value={editingCaptions[photo.id] || ''}
+                                                            onChange={(e) => setEditingCaptions(prev => ({ ...prev, [photo.id]: e.target.value }))}
+                                                            placeholder="Set caption details..."
+                                                            style={{
+                                                                flex: 1,
+                                                                fontSize: '0.8rem',
+                                                                padding: '4px 6px',
+                                                                border: '1px solid #ccc',
+                                                                borderRadius: '4px',
+                                                                minWidth: 0
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSavePortfolioCaption(photo.id)}
+                                                            style={{
+                                                                backgroundColor: '#10b981',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                padding: '0 8px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                            title="Save Caption"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

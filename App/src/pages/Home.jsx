@@ -16,6 +16,7 @@ const GALLERY_IMAGES = [
 const Home = () => {
     const [activeImage, setActiveImage] = useState(null);
     const [portfolio, setPortfolio] = useState([]);
+    const [showAll, setShowAll] = useState(false);
 
     useEffect(() => {
         const fetchPortfolio = async () => {
@@ -26,13 +27,14 @@ const Home = () => {
                     const { data, error } = await supabase
                         .from('portfolio')
                         .select('*')
-                        .order('created_at', { ascending: false });
+                        .order('sort_order', { ascending: true });
                     
                     if (!error && data && data.length > 0) {
                         loadedPhotos = data.map(item => ({
                             id: item.id,
                             src: item.image_url,
-                            alt: item.caption || 'Nail set creation'
+                            alt: item.caption || 'Nail set creation',
+                            sortOrder: item.sort_order ?? 9999
                         }));
                     }
                 } catch (err) {
@@ -47,21 +49,23 @@ const Home = () => {
                     const formattedLocal = localPhotos.map(item => ({
                         id: item.id,
                         src: item.imageUrl,
-                        alt: item.caption || 'Nail set creation'
+                        alt: item.caption || 'Nail set creation',
+                        sortOrder: item.sortOrder ?? 9999
                     }));
-                    // Prepend local photos to show them first (most recent)
-                    loadedPhotos = [...formattedLocal, ...loadedPhotos];
+                    loadedPhotos = [...loadedPhotos, ...formattedLocal];
                 }
             } catch (err) {
                 console.error('Error loading local storage portfolio:', err);
             }
+
+            // Always sort the combined photos by sortOrder ascending
+            loadedPhotos.sort((a, b) => a.sortOrder - b.sortOrder);
             
             // If empty, fall back to our gorgeous default JPEGs
             if (loadedPhotos.length === 0) {
                 setPortfolio(GALLERY_IMAGES);
             } else {
-                // Show the most recent 6 photos
-                setPortfolio(loadedPhotos.slice(0, 6));
+                setPortfolio(loadedPhotos);
             }
         };
 
@@ -170,7 +174,7 @@ const Home = () => {
                         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                         gap: '1.5rem'
                     }}>
-                        {portfolio.map((img, idx) => (
+                        {portfolio.slice(0, showAll ? portfolio.length : 6).map((img, idx) => (
                             <div 
                                 key={idx} 
                                 onClick={() => setActiveImage(img)}
@@ -221,6 +225,34 @@ const Home = () => {
                             </div>
                         ))}
                     </div>
+
+                    {portfolio.length > 6 && (
+                        <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+                            <button 
+                                onClick={() => setShowAll(!showAll)}
+                                style={{
+                                    backgroundColor: 'transparent',
+                                    border: '2px solid var(--color-primary)',
+                                    color: 'var(--color-secondary)',
+                                    padding: '0.8rem 2.5rem',
+                                    borderRadius: '50px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                                    e.currentTarget.style.color = 'var(--color-secondary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'var(--color-secondary)';
+                                }}
+                            >
+                                {showAll ? 'Show Less' : `View All Creations (${portfolio.length})`}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 
