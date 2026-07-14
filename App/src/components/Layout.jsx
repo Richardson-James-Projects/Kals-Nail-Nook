@@ -242,8 +242,19 @@ const Layout = () => {
                         Elevating your style with premium nail care services. Book your appointment today.
                     </p>
                     <div style={{ display: 'flex', gap: '1.5rem' }}>
-                        <Instagram size={24} style={{ cursor: 'pointer' }} />
-                        <Facebook size={24} style={{ cursor: 'pointer' }} />
+                        <a 
+                            href="https://www.instagram.com/kalsnailnook" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: 'inherit', display: 'inline-flex', transition: 'color 0.2s' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                            title="Visit Kals Nail Nook Instagram"
+                        >
+                            <Instagram size={24} />
+                        </a>
+                        {/* Temporarily hiding Facebook button */}
+                        {/* <Facebook size={24} style={{ cursor: 'pointer' }} /> */}
                     </div>
                     <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '1rem' }}>
                         &copy; {new Date().getFullYear()} Kals Nail Nook. All rights reserved.
