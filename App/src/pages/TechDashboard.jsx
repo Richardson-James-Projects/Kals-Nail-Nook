@@ -85,7 +85,7 @@ const TechDashboard = () => {
 
     // Portfolio Management States
     const [portfolioList, setPortfolioList] = useState([]);
-    const [portfolioFile, setPortfolioFile] = useState(null);
+    const [portfolioFiles, setPortfolioFiles] = useState([]);
     const [portfolioCaption, setPortfolioCaption] = useState('');
     const [isPortfolioUploading, setIsPortfolioUploading] = useState(false);
     const [portfolioError, setPortfolioError] = useState('');
@@ -300,91 +300,112 @@ const TechDashboard = () => {
 
     const handleUploadPortfolioPhoto = async (e) => {
         e.preventDefault();
-        if (!portfolioFile) {
-            setPortfolioError('Please select a photo to upload.');
+        if (portfolioFiles.length === 0) {
+            setPortfolioError('Please select at least one photo to upload.');
             return;
         }
 
         setIsPortfolioUploading(true);
         setPortfolioError('');
 
-        const photoId = `photo-${Date.now()}`;
-        let finalImageUrl = '';
+        let hasUploadError = false;
+        let uploadedList = [...portfolioList];
 
-        // Calculate sort order to place it at the end
-        const nextSortOrder = portfolioList.length > 0 
-            ? Math.max(...portfolioList.map(p => p.sortOrder ?? 0)) + 1 
-            : 0;
+        for (let i = 0; i < portfolioFiles.length; i++) {
+            const file = portfolioFiles[i];
+            const photoId = `photo-${Date.now()}-${i}`;
+            let finalImageUrl = '';
 
-        if (isSupabaseConfigured) {
-            try {
-                const fileExt = portfolioFile.name.split('.').pop();
-                const fileName = `${photoId}.${fileExt}`;
-                const filePath = `portfolio/${fileName}`;
+            const nextSortOrder = uploadedList.length > 0 
+                ? Math.max(...uploadedList.map(p => p.sortOrder ?? 0)) + 1 
+                : 0;
 
-                // Upload file to storage bucket
-                const { error: uploadError } = await supabase.storage
-                    .from('service-pictures')
-                    .upload(filePath, portfolioFile);
+            if (isSupabaseConfigured) {
+                try {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${photoId}.${fileExt}`;
+                    const filePath = `portfolio/${fileName}`;
 
-                if (uploadError) throw uploadError;
+                    // Upload file to storage bucket
+                    const { error: uploadError } = await supabase.storage
+                        .from('service-pictures')
+                        .upload(filePath, file);
 
-                // Get public URL
-                const { data: urlData } = supabase.storage
-                    .from('service-pictures')
-                    .getPublicUrl(filePath);
+                    if (uploadError) throw uploadError;
 
-                finalImageUrl = urlData.publicUrl;
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('service-pictures')
+                        .getPublicUrl(filePath);
 
-                // Insert into database
-                const { error: insertError } = await supabase
-                    .from('portfolio')
-                    .insert([{
+                    finalImageUrl = urlData.publicUrl;
+
+                    // Insert into database
+                    const { error: insertError } = await supabase
+                        .from('portfolio')
+                        .insert([{
+                            id: photoId,
+                            image_url: finalImageUrl,
+                            caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                            sort_order: nextSortOrder
+                        }]);
+
+                    if (insertError) throw insertError;
+
+                    uploadedList.push({
                         id: photoId,
-                        image_url: finalImageUrl,
-                        caption: portfolioCaption,
-                        sort_order: nextSortOrder
-                    }]);
-
-                if (insertError) throw insertError;
-
-            } catch (err) {
-                console.error('Database portfolio upload error:', err);
-                setPortfolioError(`Database upload error. Falling back to local storage.`);
-            }
-        }
-
-        // Local Storage fallback (Option 3 / offline support)
-        if (!finalImageUrl) {
-            try {
-                const reader = new FileReader();
-                reader.readAsDataURL(portfolioFile);
-                reader.onloadend = () => {
-                    const base64Data = reader.result;
-                    const newPhoto = {
-                        id: photoId,
-                        imageUrl: base64Data,
-                        caption: portfolioCaption,
+                        imageUrl: finalImageUrl,
+                        caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
                         sortOrder: nextSortOrder
-                    };
-                    const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
-                    localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
-                    
-                    setPortfolioFile(null);
-                    setPortfolioCaption('');
-                    setIsPortfolioUploading(false);
-                    fetchPortfolioData();
-                };
-                return;
-            } catch (err) {
-                console.error('Local storage portfolio save error:', err);
-                setPortfolioError('Failed to save photo locally.');
-                setIsPortfolioUploading(false);
-                return;
+                    });
+
+                } catch (err) {
+                    console.error('Database portfolio upload error:', err);
+                    hasUploadError = true;
+                }
+            }
+
+            // Local Storage fallback (Option 3 / offline support)
+            if (!finalImageUrl) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onloadend = () => {
+                            const base64Data = reader.result;
+                            const newPhoto = {
+                                id: photoId,
+                                imageUrl: base64Data,
+                                caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                                sortOrder: nextSortOrder
+                            };
+                            
+                            const localPhotos = JSON.parse(localStorage.getItem('portfolio') || '[]');
+                            localStorage.setItem('portfolio', JSON.stringify([...localPhotos, newPhoto]));
+                            
+                            uploadedList.push({
+                                id: photoId,
+                                imageUrl: base64Data,
+                                caption: portfolioCaption || file.name.split('.')[0] || 'Nail set creation',
+                                sortOrder: nextSortOrder
+                            });
+                            resolve();
+                        };
+                        reader.onerror = reject;
+                    });
+                } catch (err) {
+                    console.error('Local storage portfolio save error:', err);
+                    hasUploadError = true;
+                }
             }
         }
 
-        setPortfolioFile(null);
+        if (hasUploadError) {
+            setPortfolioError('Some uploads failed or were saved locally.');
+        }
+
+        // Reset inputs and reload list
+        setPortfolioFiles([]);
         setPortfolioCaption('');
         setIsPortfolioUploading(false);
         fetchPortfolioData();
@@ -1844,12 +1865,14 @@ const TechDashboard = () => {
                                 )}
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Photo</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Select Photos (Multiple Allowed)</label>
                                     <input 
+                                        key={portfolioFiles.length === 0 ? 'empty' : 'files'}
                                         type="file" 
                                         accept="image/*"
+                                        multiple
                                         required
-                                        onChange={(e) => setPortfolioFile(e.target.files[0])}
+                                        onChange={(e) => setPortfolioFiles(Array.from(e.target.files))}
                                         style={{ width: '100%', fontSize: '0.85rem' }}
                                     />
                                 </div>
