@@ -5,10 +5,6 @@ import { useAuth } from '../context/AuthContext';
 
 import { supabase, isSupabaseConfigured, formatPhoneNumber, cleanPhoneNumber } from '../utils/supabaseClient';
 
-const timeSlots = [
-    '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
-];
 
 const Booking = () => {
     const [searchParams] = useSearchParams();
@@ -203,7 +199,7 @@ const Booking = () => {
                     if (ds && ds.isWorking) {
                         const start = parseInt(ds.startTime.replace(':', ''));
                         const end = parseInt(ds.endTime.replace(':', ''));
-                        if (slotTime24 >= start && slotTime24 < end) workingTechs++;
+                        if (slotTime24 >= start && slotTime24 <= end) workingTechs++;
                     }
                 }
             });
@@ -217,7 +213,7 @@ const Booking = () => {
 
             const start = parseInt(ds.startTime.replace(':', ''));
             const end = parseInt(ds.endTime.replace(':', ''));
-            if (slotTime24 < start || slotTime24 >= end) return false;
+            if (slotTime24 < start || slotTime24 > end) return false;
 
             const isBooked = concurrentBookings.some(b => b.techId === formData.techId);
             if (isBooked) return false;
@@ -236,6 +232,74 @@ const Booking = () => {
             hours = parseInt(hours, 10) + 12;
         }
         return parseInt(hours + minutes, 10);
+    };
+
+    const parseToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const parts = timeStr.split(':').map(Number);
+        const hours = parts[0] || 0;
+        const minutes = parts[1] || 0;
+        return hours * 60 + minutes;
+    };
+
+    const formatMinutesTo12Hour = (totalMinutes) => {
+        let hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const modifier = hours >= 12 ? 'PM' : 'AM';
+        
+        let hours12 = hours % 12;
+        if (hours12 === 0) {
+            hours12 = 12;
+        }
+        
+        const hoursStr = String(hours12).padStart(2, '0');
+        const minutesStr = String(minutes).padStart(2, '0');
+        
+        return `${hoursStr}:${minutesStr} ${modifier}`;
+    };
+
+    const sortTimeSlots = (slots) => {
+        return [...slots].sort((a, b) => convertTo24Hour(a) - convertTo24Hour(b));
+    };
+
+    const getAvailableTimeSlots = () => {
+        if (!formData.date) return [];
+        if (blockedDates.includes(formData.date)) return [];
+
+        const dateObj = new Date(formData.date + 'T00:00:00');
+        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        let slotsSet = new Set();
+
+        if (formData.techId === 'any') {
+            technicians.forEach(t => {
+                const sched = techSchedules[t.id];
+                if (sched) {
+                    const ds = sched.find(d => d.day === dayName);
+                    if (ds && ds.isWorking) {
+                        const startMin = parseToMinutes(ds.startTime);
+                        const endMin = parseToMinutes(ds.endTime);
+                        for (let min = startMin; min <= endMin; min += 30) {
+                            slotsSet.add(formatMinutesTo12Hour(min));
+                        }
+                    }
+                }
+            });
+        } else {
+            const sched = techSchedules[formData.techId];
+            if (sched) {
+                const ds = sched.find(d => d.day === dayName);
+                if (ds && ds.isWorking) {
+                    const startMin = parseToMinutes(ds.startTime);
+                    const endMin = parseToMinutes(ds.endTime);
+                    for (let min = startMin; min <= endMin; min += 30) {
+                        slotsSet.add(formatMinutesTo12Hour(min));
+                    }
+                }
+            }
+        }
+
+        const allSlots = sortTimeSlots(Array.from(slotsSet));
+        return allSlots.filter(time => isSlotAvailable(formData.date, time));
     };
 
     const compressImage = (file) => {
@@ -283,7 +347,7 @@ const Booking = () => {
             const availableTech = technicians.find(t => {
                 const ds = techSchedules[t.id]?.find(d => d.day === dayName);
                 if (!ds || !ds.isWorking) return false;
-                if (slotTime24 < parseInt(ds.startTime.replace(':', '')) || slotTime24 >= parseInt(ds.endTime.replace(':', ''))) return false;
+                if (slotTime24 < parseInt(ds.startTime.replace(':', '')) || slotTime24 > parseInt(ds.endTime.replace(':', ''))) return false;
                 if (concurrent.some(b => b.techId === t.id)) return false;
                 return true;
             });
@@ -510,34 +574,40 @@ const Booking = () => {
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                             <Clock size={16} style={{ display: 'inline', marginRight: '5px' }} /> Time
                         </label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            {timeSlots.map(time => {
-                                const available = isSlotAvailable(formData.date, time);
-                                const isSelected = formData.time === time;
-
-                                return (
-                                    <button
-                                        key={time}
-                                        type="button"
-                                        disabled={!available}
-                                        onClick={() => available && setFormData({ ...formData, time })}
-                                        style={{
-                                            padding: '0.5rem 0.75rem',
-                                            borderRadius: '20px',
-                                            border: isSelected ? '1px solid var(--color-primary)' : '1px solid #ddd',
-                                            backgroundColor: isSelected ? 'var(--color-primary)' : (available ? '#fff' : '#f5f5f5'),
-                                            color: isSelected ? '#fff' : (available ? '#333' : '#aaa'),
-                                            fontSize: '0.875rem',
-                                            cursor: available ? 'pointer' : 'not-allowed',
-                                            textDecoration: available ? 'none' : 'line-through'
-                                        }}
-                                    >
-                                        {time}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <input type="hidden" name="time" value={formData.time} required />
+                        <select
+                            name="time"
+                            value={formData.time}
+                            onChange={handleChange}
+                            disabled={!formData.date}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                backgroundColor: !formData.date ? '#f3f4f6' : '#fff',
+                                color: !formData.date ? '#9ca3af' : '#1f2937',
+                                cursor: !formData.date ? 'not-allowed' : 'pointer',
+                                outline: 'none',
+                                fontSize: '1rem',
+                                transition: 'border-color 0.2s, box-shadow 0.2s'
+                            }}
+                            required
+                        >
+                            {!formData.date ? (
+                                <option value="">Please select a date first</option>
+                            ) : (
+                                <>
+                                    <option value="" disabled>Choose a time...</option>
+                                    {getAvailableTimeSlots().length === 0 ? (
+                                        <option value="" disabled>No available slots on this day</option>
+                                    ) : (
+                                        getAvailableTimeSlots().map(time => (
+                                            <option key={time} value={time}>{time}</option>
+                                        ))
+                                    )}
+                                </>
+                            )}
+                        </select>
                     </div>
                 </div>
 
