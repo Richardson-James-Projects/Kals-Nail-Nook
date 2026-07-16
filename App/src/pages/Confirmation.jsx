@@ -125,8 +125,8 @@ const Confirmation = () => {
                         <UserPlus size={24} style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: '2px' }} />
                         <div>
                             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-secondary)' }}>Manage Your Appointment</h4>
-                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', opacity: 0.8 }}>
-                                Want to view, change, or cancel your appointment online? You can easily do so by creating an account using the email you booked with.
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', opacity: 0.8, lineHeight: '1.4' }}>
+                                Want to view, change, or cancel your appointment online? You can easily do so by creating an account using the email you booked with. For other questions or help, contact us at <a href="mailto:support@kalsnailnook.com" style={{ color: 'var(--color-secondary)', fontWeight: '600', textDecoration: 'underline' }}>support@kalsnailnook.com</a>.
                             </p>
                             <Link to="/register" style={{
                                 display: 'inline-block',
@@ -157,8 +157,8 @@ const Confirmation = () => {
                         <Info size={24} style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: '2px' }} />
                         <div>
                             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-secondary)' }}>Manage Your Appointment</h4>
-                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', opacity: 0.8 }}>
-                                You can view, change, or cancel your appointment anytime right from your dashboard.
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', opacity: 0.8, lineHeight: '1.4' }}>
+                                You can view, change, or cancel your appointment anytime right from your dashboard. For other questions or help, contact us at <a href="mailto:support@kalsnailnook.com" style={{ color: 'var(--color-secondary)', fontWeight: '600', textDecoration: 'underline' }}>support@kalsnailnook.com</a>.
                             </p>
                             <Link to="/dashboard" style={{
                                 display: 'inline-block',

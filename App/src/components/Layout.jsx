@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Instagram, Facebook, LogOut, User, MapPin } from 'lucide-react';
+import { Menu, X, Instagram, Facebook, LogOut, User, MapPin, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
@@ -253,7 +253,7 @@ const Layout = () => {
                             textDecoration: 'none',
                             fontSize: '0.9rem',
                             fontWeight: '500',
-                            marginBottom: '0.75rem',
+                            marginBottom: '0.5rem',
                             opacity: 0.9,
                             transition: 'opacity 0.2s'
                         }}
@@ -262,6 +262,26 @@ const Layout = () => {
                     >
                         <MapPin size={16} />
                         <span>3260 N 3450 W, Plain City, UT 84404</span>
+                    </a>
+                    <a 
+                        href="mailto:support@kalsnailnook.com"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            color: 'var(--color-primary)',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            marginBottom: '0.75rem',
+                            opacity: 0.9,
+                            transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = 0.9}
+                    >
+                        <Mail size={16} />
+                        <span>support@kalsnailnook.com</span>
                     </a>
                     <div style={{ display: 'flex', gap: '1.5rem' }}>
                         <a 
