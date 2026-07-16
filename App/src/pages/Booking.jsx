@@ -188,7 +188,12 @@ const Booking = () => {
         const dateObj = new Date(date + 'T00:00:00');
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
         const slotTime24 = convertTo24Hour(time);
-        const concurrentBookings = existingBookings.filter(b => b.date === date && b.time === time && b.status !== 'Cancelled');
+        const slotMin = convertTimeToMinutes(time);
+
+        // Get selected service duration
+        const selectedServiceObj = services.find(s => s.id === formData.service);
+        const selectedDurationStr = selectedServiceObj ? selectedServiceObj.duration : '60 min';
+        const selectedDuration = parseDurationToMinutes(selectedDurationStr);
 
         if (formData.techId === 'any') {
             let workingTechs = 0;
@@ -199,11 +204,15 @@ const Booking = () => {
                     if (ds && ds.isWorking) {
                         const start = parseInt(ds.startTime.replace(':', ''));
                         const end = parseInt(ds.endTime.replace(':', ''));
-                        if (slotTime24 >= start && slotTime24 <= end) workingTechs++;
+                        if (slotTime24 >= start && slotTime24 <= end) {
+                            if (!isTechBookedDuringInterval(t.id, date, slotMin, selectedDuration)) {
+                                workingTechs++;
+                            }
+                        }
                     }
                 }
             });
-            return workingTechs > concurrentBookings.length;
+            return workingTechs > 0;
         } else {
             const schedule = techSchedules[formData.techId];
             if (!schedule) return false;
@@ -215,9 +224,7 @@ const Booking = () => {
             const end = parseInt(ds.endTime.replace(':', ''));
             if (slotTime24 < start || slotTime24 > end) return false;
 
-            const isBooked = concurrentBookings.some(b => b.techId === formData.techId);
-            if (isBooked) return false;
-            return true;
+            return !isTechBookedDuringInterval(formData.techId, date, slotMin, selectedDuration);
         }
     };
 
@@ -240,6 +247,46 @@ const Booking = () => {
         const hours = parts[0] || 0;
         const minutes = parts[1] || 0;
         return hours * 60 + minutes;
+    };
+
+    const convertTimeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const [time, modifier] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (hours === 12) {
+            hours = 0;
+        }
+        if (modifier === 'PM') {
+            hours += 12;
+        }
+        return hours * 60 + minutes;
+    };
+
+    const parseDurationToMinutes = (durationStr) => {
+        if (!durationStr) return 0;
+        const lower = durationStr.toLowerCase();
+        if (lower.includes('hour')) {
+            const num = parseFloat(lower.match(/[\d.]+/)?.[0] || 0);
+            return num * 60;
+        }
+        const minsMatch = lower.match(/\d+/);
+        if (minsMatch) {
+            return parseInt(minsMatch[0], 10);
+        }
+        return 0;
+    };
+
+    const isTechBookedDuringInterval = (techId, date, startMin, duration) => {
+        return existingBookings.some(b => {
+            if (b.techId !== techId || b.date !== date || b.status === 'Cancelled') return false;
+            
+            const bServiceObj = services.find(s => s.id === b.service);
+            const bDurationStr = bServiceObj ? bServiceObj.duration : '60 min';
+            const bDuration = parseDurationToMinutes(bDurationStr);
+            const bStart = convertTimeToMinutes(b.time);
+            
+            return startMin < bStart + bDuration && bStart < startMin + duration;
+        });
     };
 
     const formatMinutesTo12Hour = (totalMinutes) => {
@@ -342,13 +389,17 @@ const Booking = () => {
             const dateObj = new Date(formData.date + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
             const slotTime24 = convertTo24Hour(formData.time);
-            const concurrent = existingBookings.filter(b => b.date === formData.date && b.time === formData.time && b.status !== 'Cancelled');
+            const slotMin = convertTimeToMinutes(formData.time);
+
+            const selectedServiceObj = services.find(s => s.id === formData.service);
+            const selectedDurationStr = selectedServiceObj ? selectedServiceObj.duration : '60 min';
+            const selectedDuration = parseDurationToMinutes(selectedDurationStr);
 
             const availableTech = technicians.find(t => {
                 const ds = techSchedules[t.id]?.find(d => d.day === dayName);
                 if (!ds || !ds.isWorking) return false;
                 if (slotTime24 < parseInt(ds.startTime.replace(':', '')) || slotTime24 > parseInt(ds.endTime.replace(':', ''))) return false;
-                if (concurrent.some(b => b.techId === t.id)) return false;
+                if (isTechBookedDuringInterval(t.id, formData.date, slotMin, selectedDuration)) return false;
                 return true;
             });
             assignedTechId = availableTech ? availableTech.id : technicians[0]?.id;
@@ -427,7 +478,11 @@ const Booking = () => {
         if (e.target.name === 'phone') {
             value = formatPhoneNumber(value);
         }
-        setFormData({ ...formData, [e.target.name]: value });
+        if (e.target.name === 'service') {
+            setFormData(prev => ({ ...prev, service: value, time: '' }));
+        } else {
+            setFormData(prev => ({ ...prev, [e.target.name]: value }));
+        }
     };
 
     const getPricesInfo = () => {
