@@ -345,8 +345,7 @@ const Booking = () => {
             }
         }
 
-        const allSlots = sortTimeSlots(Array.from(slotsSet));
-        return allSlots.filter(time => isSlotAvailable(formData.date, time));
+        return sortTimeSlots(Array.from(slotsSet));
     };
 
     const compressImage = (file) => {
@@ -656,9 +655,14 @@ const Booking = () => {
                                     {getAvailableTimeSlots().length === 0 ? (
                                         <option value="" disabled>No available slots on this day</option>
                                     ) : (
-                                        getAvailableTimeSlots().map(time => (
-                                            <option key={time} value={time}>{time}</option>
-                                        ))
+                                        getAvailableTimeSlots().map(time => {
+                                            const available = isSlotAvailable(formData.date, time);
+                                            return (
+                                                <option key={time} value={time} disabled={!available}>
+                                                    {time} {!available ? '(Unavailable)' : ''}
+                                                </option>
+                                            );
+                                        })
                                     )}
                                 </>
                             )}
