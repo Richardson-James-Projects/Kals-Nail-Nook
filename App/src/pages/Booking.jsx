@@ -264,14 +264,15 @@ const Booking = () => {
 
     const parseDurationToMinutes = (durationStr) => {
         if (!durationStr) return 0;
-        const lower = durationStr.toLowerCase();
-        if (lower.includes('hour')) {
+        const lower = durationStr.toLowerCase().trim();
+        
+        if (lower.includes('hr')) {
             const num = parseFloat(lower.match(/[\d.]+/)?.[0] || 0);
             return num * 60;
         }
-        const minsMatch = lower.match(/\d+/);
+        const minsMatch = lower.match(/[\d.]+/);
         if (minsMatch) {
-            return parseInt(minsMatch[0], 10);
+            return Math.round(parseFloat(minsMatch[0]));
         }
         return 0;
     };
