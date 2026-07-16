@@ -286,7 +286,9 @@ const Booking = () => {
             const bDuration = parseDurationToMinutes(bDurationStr);
             const bStart = convertTimeToMinutes(b.time);
             
-            return startMin < bStart + bDuration && bStart < startMin + duration;
+            const overlap = startMin < bStart + bDuration && bStart < startMin + duration;
+            console.log(`[Overlap Check] slot=${formatMinutesTo12Hour(startMin)} (startMin=${startMin}, duration=${duration}) vs booking=${b.time} (bStart=${bStart}, bDuration=${bDuration}). Overlap=${overlap}`);
+            return overlap;
         });
     };
 
