@@ -134,10 +134,87 @@ const TechDashboard = () => {
     const [portfolioError, setPortfolioError] = useState('');
     const [inputResetKey, setInputResetKey] = useState(0);
 
-    const TIME_SLOTS = [
-        '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-        '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
-    ];
+    const generateAllTimeSlots = () => {
+        const slots = [];
+        for (let min = 0; min < 24 * 60; min += 30) {
+            let hours = Math.floor(min / 60);
+            const minutes = min % 60;
+            const modifier = hours >= 12 ? 'PM' : 'AM';
+            let hours12 = hours % 12;
+            if (hours12 === 0) {
+                hours12 = 12;
+            }
+            const hoursStr = String(hours12).padStart(2, '0');
+            const minutesStr = String(minutes).padStart(2, '0');
+            slots.push(`${hoursStr}:${minutesStr} ${modifier}`);
+        }
+        return slots;
+    };
+    const TIME_SLOTS = generateAllTimeSlots();
+
+    const parseDurationToMinutes = (durationStr) => {
+        if (!durationStr) return 0;
+        const lower = durationStr.toLowerCase().trim();
+        if (lower.includes('hr')) {
+            const num = parseFloat(lower.match(/[\d.]+/)?.[0] || 0);
+            return num * 60;
+        }
+        const minsMatch = lower.match(/[\d.]+/);
+        if (minsMatch) {
+            return Math.round(parseFloat(minsMatch[0]));
+        }
+        return 0;
+    };
+
+    const convertTimeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const match = timeStr.match(/(\d+):(\d+)(?::\d+)?\s*(am|pm)/i);
+        if (match) {
+            let hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            const ampm = match[3].toLowerCase();
+            
+            if (hours === 12) {
+                hours = 0;
+            }
+            if (ampm === 'pm') {
+                hours += 12;
+            }
+            return hours * 60 + minutes;
+        }
+        const parts = timeStr.split(':').map(Number);
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return parts[0] * 60 + parts[1];
+        }
+        return 0;
+    };
+
+    const isTechBookedDuringInterval = (targetTechId, date, startMin, duration) => {
+        return allBookingsList.some(b => {
+            if (b.techId !== targetTechId || b.date !== date || b.status === 'Cancelled') return false;
+            
+            const bServiceObj = services.find(s => s.id === b.service);
+            const bDurationStr = bServiceObj ? bServiceObj.duration : '60 min';
+            const bDuration = parseDurationToMinutes(bDurationStr);
+            const bStart = convertTimeToMinutes(b.time);
+            
+            return startMin < bStart + bDuration && bStart < startMin + duration;
+        });
+    };
+
+    const isTechBookingSlotAvailable = (date, time) => {
+        if (!date) return true;
+        if (blockedDates.includes(date)) return false;
+
+        const slotMin = convertTimeToMinutes(time);
+
+        // Get selected service duration
+        const selectedServiceObj = services.find(s => s.id === bookingFormData.service);
+        const selectedDurationStr = selectedServiceObj ? selectedServiceObj.duration : '60 min';
+        const selectedDuration = parseDurationToMinutes(selectedDurationStr);
+
+        return !isTechBookedDuringInterval(bookingFormData.techId, date, slotMin, selectedDuration);
+    };
 
     const fetchDashboardData = async (currentTechId) => {
         if (isSupabaseConfigured) {
@@ -1117,7 +1194,7 @@ const TechDashboard = () => {
             }
 
             setIsAddingUser(false);
-        } catch (err) {
+        } catch {
             setAddUserError('Failed to create account.');
         }
     };
@@ -1129,7 +1206,7 @@ const TechDashboard = () => {
             service: mainServices[0]?.id || services[0]?.id || '',
             techId: techId || technicians[0]?.id || '',
             date: new Date().toISOString().split('T')[0],
-            time: '09:00 AM',
+            time: '',
             guestName: '',
             guestPhone: '',
             guestEmail: ''
@@ -2549,7 +2626,7 @@ const TechDashboard = () => {
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Service</label>
                                     <select
                                         value={bookingFormData.service}
-                                        onChange={(e) => setBookingFormData({ ...bookingFormData, service: e.target.value })}
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, service: e.target.value, time: '' })}
                                         required
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
@@ -2562,7 +2639,7 @@ const TechDashboard = () => {
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Technician</label>
                                     <select
                                         value={bookingFormData.techId}
-                                        onChange={(e) => setBookingFormData({ ...bookingFormData, techId: e.target.value })}
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, techId: e.target.value, time: '' })}
                                         required
                                         style={{ width: '100%', padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff' }}
                                     >
@@ -2628,39 +2705,39 @@ const TechDashboard = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.3rem', fontWeight: '500' }}>Time Slot</label>
-                                    <div style={{ display: 'flex', gap: '0.4rem', width: '100%' }}>
-                                        {(() => {
-                                            const timeParts = (bookingFormData.time || '09:00 AM').split(' ');
-                                            const timeVal = timeParts[0] || '09:00';
-                                            const amPmVal = timeParts[1] || 'AM';
-                                            return (
-                                                <>
-                                                    <input
-                                                        type="text"
-                                                        list="techTimeSlots"
-                                                        value={timeVal}
-                                                        onChange={(e) => setBookingFormData({ ...bookingFormData, time: `${e.target.value} ${amPmVal}` })}
-                                                        required
-                                                        placeholder="10:00"
-                                                        style={{ flex: 1, minWidth: 0, padding: '0.6rem 0.4rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
-                                                    />
-                                                    <select
-                                                        value={amPmVal}
-                                                        onChange={(e) => setBookingFormData({ ...bookingFormData, time: `${timeVal} ${e.target.value}` })}
-                                                        style={{ width: '65px', flexShrink: 0, padding: '0.6rem 0.2rem', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}
-                                                    >
-                                                        <option value="AM">AM</option>
-                                                        <option value="PM">PM</option>
-                                                    </select>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                    <datalist id="techTimeSlots">
-                                        {TIME_SLOTS.map(t => (
-                                            <option key={t} value={t.split(' ')[0]} />
-                                        ))}
-                                    </datalist>
+                                    <select
+                                        value={bookingFormData.time}
+                                        onChange={(e) => setBookingFormData({ ...bookingFormData, time: e.target.value })}
+                                        disabled={!bookingFormData.date}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.6rem',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            backgroundColor: !bookingFormData.date ? '#f3f4f6' : '#fff',
+                                            color: !bookingFormData.date ? '#9ca3af' : '#1f2937',
+                                            cursor: !bookingFormData.date ? 'not-allowed' : 'pointer',
+                                            outline: 'none',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        required
+                                    >
+                                        {!bookingFormData.date ? (
+                                            <option value="">Please select a date first</option>
+                                        ) : (
+                                            <>
+                                                <option value="" disabled>Choose a time...</option>
+                                                {TIME_SLOTS.map(t => {
+                                                    const available = isTechBookingSlotAvailable(bookingFormData.date, t);
+                                                    return (
+                                                        <option key={t} value={t} disabled={!available}>
+                                                            {t} {!available ? '(Unavailable)' : ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </>
+                                        )}
+                                    </select>
                                 </div>
                             </div>
                         </div>
