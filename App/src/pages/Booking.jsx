@@ -166,6 +166,12 @@ const Booking = () => {
         loadData();
     }, [user, isBookingForSomeoneElse, searchParams]);
 
+    useEffect(() => {
+        if (technicians.length === 1 && formData.techId !== technicians[0].id) {
+            setFormData(prev => ({ ...prev, techId: technicians[0].id }));
+        }
+    }, [technicians, formData.techId]);
+
     const toggleBookingForSomeoneElse = () => {
         setIsBookingForSomeoneElse(!isBookingForSomeoneElse);
         if (!isBookingForSomeoneElse) {
@@ -549,18 +555,34 @@ const Booking = () => {
                     </div>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Technician</label>
-                        <select
-                            name="techId"
-                            value={formData.techId}
-                            onChange={(e) => {
-                                setFormData(prev => ({ ...prev, techId: e.target.value, time: '' }));
-                            }}
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: '#fff', appearance: 'none' }}
-                        >
-                            {technicians.map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                        </select>
+                        {technicians.length === 1 ? (
+                            <div style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                backgroundColor: '#f3f4f6',
+                                color: '#1f2937',
+                                fontWeight: '500',
+                                boxSizing: 'border-box'
+                            }}>
+                                {technicians[0].name}
+                            </div>
+                        ) : (
+                            <select
+                                name="techId"
+                                value={formData.techId}
+                                onChange={(e) => {
+                                    setFormData(prev => ({ ...prev, techId: e.target.value, time: '' }));
+                                }}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: '#fff', appearance: 'none' }}
+                            >
+                                <option value="any">Any Technician</option>
+                                {technicians.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
                 </div>
 
